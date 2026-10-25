@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "flappybird-autoplayer"
+version = "0.1.0"
+description = "Vision-only auto player for Flappy Bird using Python, OpenCV, and Playwright"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "FlappyBird-AutoPlayer contributors" }]
+dependencies = [
+    "numpy>=1.24,<3",
+    "opencv-python>=4.8,<5",
+    "playwright>=1.46,<2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10"]
+
+[project.scripts]
+flappy-auto = "flappy_auto.__main__:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

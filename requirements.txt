@@ -1,0 +1,2 @@
+# Editable install from repository root also exposes the 'flappy-auto' command.
+-e .
