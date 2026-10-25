@@ -68,7 +68,10 @@ class GameBrowser:
     def _on_frame(self, event: dict) -> None:
         # Keep only the latest frame, so slow consumers cannot build a backlog.
         self._latest = event['data']
-        self.frame_time = time.monotonic()
+        received = time.monotonic()
+        timestamp = event.get('metadata', {}).get('timestamp')
+        age = time.time() - timestamp if timestamp is not None else 0
+        self.frame_time = received - age if 0 <= age < 2 else received
         self._sequence += 1
         with suppress(Error):
             self._session.send('Page.screencastFrameAck', {'sessionId': event['sessionId']})
@@ -91,10 +94,11 @@ class GameBrowser:
         if self._streaming and visible:
             # Pump Playwright's event loop while waiting for a *new* frame.
             # Reusing the last image here would inflate FPS and corrupt velocity.
-            self.page.wait_for_timeout(1)
+            if self._sequence == self._consumed:
+                self.page.wait_for_timeout(1)
             deadline = time.monotonic() + .15
             while self._sequence == self._consumed and time.monotonic() < deadline:
-                self.page.wait_for_timeout(4)
+                self.page.wait_for_timeout(1)
             if self._latest is not None and self._sequence != self._consumed:
                 self._consumed = self._sequence
                 image = self._decode(self._latest)

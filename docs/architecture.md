@@ -3,9 +3,9 @@
 ## Flow
 
 1. `browser.GameBrowser` finds the largest canvas element across frames and subscribes to Chromium's JPEG screencast via Playwright/CDP. It retains only the newest frame, acknowledges received frames, and sends Space as a browser keyboard event. Static pages or offscreen regions use direct screenshots as a fallback.
-2. `vision.detect` converts the image to HSV, uses yellow and green masks, prefers bird candidates with a red beak, and tracks their horizontal position. Pipe detection finds the largest opening between green sections so score digits drawn over the upper pipe do not move the detected gap.
-3. `strategy.Strategy` estimates vertical movement from consecutive observations and chooses whether to flap, respecting cooldown.
-4. `__main__.run` coordinates frames and actions, optionally displaying/saving overlay images. Its default viewport is 480 × 720 and its target is 40 FPS; the actual measured average is printed in the console. Known ad loaders are filtered on flappybird.io unless `--allow-ads` is set.
+2. `vision.detect` downsamples large images to at most 320 pixels wide, converts the image to HSV, uses yellow and green masks, prefers bird candidates with a red beak, and tracks their horizontal position. Pipe detection returns all visible gaps and selects the nearest relevant one. It finds the largest opening between green sections so score digits drawn over the upper pipe do not move the detected gap. Results are scaled back to screenshot coordinates.
+3. `strategy.Strategy` estimates velocity at the current image timestamp, including when frames are less than 15 ms apart. It fits flight arcs to estimate gravity and jump strength, and median-filters estimates from separate arcs. A beam search considers flap/coast sequences over 1.4 seconds, accounting for input latency, cooldown and visible pipes. Collision checks cover the whole movement between planning steps, including the tail of a pipe about to leave the bird's position.
+4. `__main__.run` coordinates frames and actions. Its default viewport is 480 × 720 and its target control rate is 60 FPS. The optional debug display refreshes independently at 30 FPS. Logs show recent processing FPS and image age; the final summary shows average FPS. Known ad loaders are filtered on flappybird.io unless `--allow-ads` is set.
 
 ## Coordinate system
 
@@ -27,11 +27,10 @@ HSV here follows OpenCV's convention: H from 0–179, S/V from 0–255. Differen
 Modify `Strategy` defaults in `src/flappy_auto/strategy.py`:
 
 - `min_flap_interval` (seconds): limits flap frequency.
-- `deadband_fraction`: how far below target before flapping.
-- `anticipation_seconds`: predict altitude based on recent measured velocity.
-- `target_offset_fraction`: bias target Y relative to center of gap.
+- `latency_seconds`: delay between the captured image and the key taking effect; the runner updates this from image age.
+- `gravity`, `jump_speed`, `pipe_speed`: initial estimates in screenshot pixels and seconds. Zero selects scale-based defaults; observations update them during play.
 
-The controller is heuristic and not reinforcement learning. Avoid interpreting the demo result as guaranteed success on the actual website.
+The planner evaluates 20 steps of 70 ms and retains 14 candidate trajectories at each step. Increasing either the horizon or beam width increases CPU work. Physics calibration uses separate flight arcs so many overlapping frame fits do not amplify a single noisy observation. This is model-based control, without reinforcement learning or reads of game state. Avoid interpreting the demo result as guaranteed success on the actual website.
 
 ## Ideas for future milestones
 

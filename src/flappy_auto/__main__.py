@@ -24,9 +24,10 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument('--selector', default='canvas', help='CSS selector for game region, including in iframes')
     parser.add_argument('--roi', type=int, nargs=4, metavar=('X', 'Y', 'W', 'H'), help='Crop screenshot (canvas-relative, else viewport-relative)')
     parser.add_argument('--seconds', type=float, default=40, help='Max run duration in seconds, 0 = unlimited')
-    parser.add_argument('--fps', type=float, default=40, help='Target capture rate; actual rate may be lower (default: 40)')
+    parser.add_argument('--fps', type=float, default=60, help='Target control rate; actual rate may be lower (default: 60)')
     parser.add_argument('--viewport', type=int, nargs=2, default=(480, 720), metavar=('WIDTH', 'HEIGHT'), help='Browser viewport (default: 480 720)')
     parser.add_argument('--debug', action='store_true', help='Show computer vision overlay; press Q to stop')
+    parser.add_argument('--debug-fps', type=float, default=30, help='Debug window refresh rate, independent of control rate (default: 30)')
     parser.add_argument('--save-debug', type=Path, help='Directory for occasional annotated screenshots')
     parser.add_argument('--capture-only', type=Path, help='Capture one screenshot then exit; useful for adjusting detection')
     parser.add_argument('--dry-run', action='store_true', help='Show decisions but do not press Space')
@@ -38,7 +39,7 @@ def make_parser() -> argparse.ArgumentParser:
 
 
 def run(args: argparse.Namespace) -> int:
-    if args.fps <= 0 or args.seconds < 0 or min(args.viewport) <= 0:
+    if args.fps <= 0 or args.debug_fps <= 0 or args.seconds < 0 or min(args.viewport) <= 0:
         raise ValueError('--fps and viewport dimensions must be positive; --seconds must be nonnegative')
     # Small vision frames do not benefit from scheduling a worker per CPU core.
     cv2.setNumThreads(2)
@@ -81,6 +82,8 @@ def run(args: argparse.Namespace) -> int:
                 tick = 0
                 flap_count = 0
                 last_report = start
+                last_report_tick = 0
+                last_debug = last_saved = float('-inf')
                 print('[INFO] Bot running. Stop with Ctrl+C' + (' or Q in debug window.' if args.debug else '.'))
                 while not args.seconds or time.monotonic() - start < args.seconds:
                     frame_start = time.monotonic()
@@ -88,28 +91,36 @@ def run(args: argparse.Namespace) -> int:
                     observed_at = game.frame_time
                     obs = detect(frame, previous)
                     previous = obs.bird
+                    strategy.latency_seconds = max(.004, min(.15, time.monotonic() - observed_at + .004))
                     flap, status = strategy.should_flap(obs, observed_at)
                     if flap and not args.dry_run:
                         game.flap()
                         flap_count += 1
                     tick += 1
-                    if args.debug or (args.save_debug and tick % max(1, round(args.fps)) == 0):
+                    render_time = time.monotonic()
+                    show_debug = args.debug and render_time - last_debug >= 1 / args.debug_fps
+                    save_debug = args.save_debug and render_time - last_saved >= 1
+                    if show_debug or save_debug:
                         overlay = annotate(frame, obs, status)
-                        if args.save_debug and tick % max(1, round(args.fps)) == 0:
+                        if save_debug:
                             cv2.imwrite(str(args.save_debug / f'frame_{tick:05d}.png'), overlay)
-                        if args.debug:
+                            last_saved = render_time
+                        if show_debug:
+                            last_debug = render_time
                             cv2.imshow('Flappy AutoPlayer - press Q to quit', overlay)
                             if cv2.waitKey(1) & 0xFF in (ord('q'), ord('Q')):
                                 break
                     now = time.monotonic()
                     if now - last_report > 2:
-                        print(f'[INFO] fps={tick / (now - start):.1f} frames={tick} flaps={flap_count} bird={bool(obs.bird)} pipe={bool(obs.pipe)} | {status}')
+                        print(f'[INFO] fps={(tick-last_report_tick) / (now-last_report):.1f} age={max(0, now-observed_at)*1000:.0f}ms frames={tick} flaps={flap_count} bird={bool(obs.bird)} pipe={bool(obs.pipe)} | {status}')
                         last_report = now
+                        last_report_tick = tick
                     remaining = 1 / args.fps - (time.monotonic() - frame_start)
                     if remaining > 0:
                         # Let frame events arrive while waiting for the next tick.
                         page.wait_for_timeout(remaining * 1000)
-                print(f'[DONE] frames={tick}, flaps={flap_count}, elapsed={time.monotonic()-start:.1f}s')
+                elapsed = time.monotonic() - start
+                print(f'[DONE] fps={tick/elapsed:.1f}, frames={tick}, flaps={flap_count}, elapsed={elapsed:.1f}s')
                 return 0
             finally:
                 if game is not None:

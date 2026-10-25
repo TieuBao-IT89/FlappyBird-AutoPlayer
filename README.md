@@ -12,7 +12,7 @@ The repository contains a **working, locally testable MVP** and an original offl
 - Automatically selects the largest visible `<canvas>` on the page (even when nested inside an iframe)
 - Reads Chromium's frame stream and processes the newest image with OpenCV, without queuing old frames
 - Detects **yellow/orange bird** and **green pipe pair** with HSV masks
-- Predicts bird position and triggers **Space** with cooldown control
+- Estimates gravity, jump strength and pipe speed from observations, then plans **Space** inputs through the visible gaps
 - Supports debug overlay, screenshot capture, dry-run, manual start, and customizable region
 - Includes a tiny **self-contained local game demo**, unit tests, GitHub Actions CI and MIT license
 
@@ -49,7 +49,13 @@ The website version might need calibration because its current graphics, game ov
 
 ### Capture performance
 
-The default viewport is **480 × 720**, with a target of **40 FPS**. The console reports the measured average processing rate; `--fps` sets a ceiling and does not guarantee that rate. Chromium streams JPEG frames, and the bot keeps only the latest frame. Still pages and canvas regions outside the viewport use a screenshot fallback. Coordinates are normalized to CSS pixels, including on Windows displays with scaling enabled.
+The default viewport is **480 × 720**, with a target control rate of **60 FPS**. The console reports the processing rate over the last two seconds and the age of the image used for the decision; the final summary includes average FPS. `--fps` sets a ceiling and does not guarantee that rate. Chromium streams JPEG frames, and the bot keeps only the latest frame. Still pages and canvas regions outside the viewport use a screenshot fallback. Coordinates are normalized to CSS pixels, including on Windows displays with scaling enabled.
+
+Vision processing uses an image at most 320 pixels wide, then maps detections back to screenshot coordinates. The debug window refreshes independently at 30 FPS by default, so drawing the overlay does not force every control tick to redraw it. To request a faster debug display:
+
+```powershell
+python -m flappy_auto --debug --debug-fps 60 --seconds 60
+```
 
 To reduce the requested capture rate or change the viewport:
 
@@ -88,7 +94,7 @@ python -m flappy_auto --roi 425 100 360 600 --seconds 40 --debug
 
 `425 100 360 600` is **illustrative only**, not a confirmed live-game location. When a canvas is detected, ROI is relative to the canvas screenshot; otherwise it is relative to the viewport screenshot.
 
-To record debugging images approximately once a second at the requested frame rate (less often if actual FPS is lower):
+To record debugging images approximately once a second:
 
 ```powershell
 python -m flappy_auto --demo --save-debug artifacts\debug --seconds 15
@@ -134,11 +140,11 @@ FlappyBird-AutoPlayer/
 ```text
 Chromium frame stream -> latest BGR image -> HSV color segmentation
                    -> locate yellow bird + green pipes
-                   -> calculate next gap and bird velocity
-                   -> choose flap / coast -> Playwright Space -> repeat
+                   -> estimate flight physics and visible pipe motion
+                   -> plan safe flap / coast sequences -> Playwright Space -> repeat
 ```
 
-**Known MVP limitations:** object recognition relies on specific sprite colors; it can be confused by backgrounds and skins. Browser screenshot latency limits capture rate, and the heuristic controller does not guarantee high scores. No automatic game-over detection, score reading, AI learning or leaderboard interaction is implemented. No direct probing of protected/private game APIs. See `docs/architecture.md` for tuning instructions and future roadmap.
+**Known MVP limitations:** object recognition relies on specific sprite colors; it can be confused by backgrounds and skins. The controller adapts a simple physics model, and its short-horizon planner does not guarantee high scores. No automatic game-over detection, score reading, reinforcement learning or leaderboard interaction is implemented. No direct probing of protected/private game APIs. See `docs/architecture.md` for tuning instructions and future roadmap.
 
 ## Publish to GitHub
 

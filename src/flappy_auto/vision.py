@@ -32,6 +32,7 @@ class Observation:
     pipe: Pipe | None
     width: int
     height: int
+    pipes: tuple[Pipe, ...] = ()
 
 
 def _color_mask(hsv: np.ndarray, lower: tuple[int, int, int], upper: tuple[int, int, int]) -> np.ndarray:
@@ -92,7 +93,7 @@ def _runs(indices: np.ndarray) -> list[tuple[int, int]]:
     return result
 
 
-def _pipe_from_mask(mask: np.ndarray, bird: Bird | None) -> Pipe | None:
+def _pipes_from_mask(mask: np.ndarray) -> list[Pipe]:
     h, w = mask.shape
     floor = int(h * .88)
     roi = mask[:floor, :]
@@ -122,17 +123,27 @@ def _pipe_from_mask(mask: np.ndarray, bird: Bird | None) -> Pipe | None:
             continue
         gap_top, gap_bottom = max(gaps, key=lambda gap: gap[1] - gap[0])
         candidates.append(Pipe(left, right, gap_top, gap_bottom))
-    if not candidates:
+    return sorted(candidates, key=lambda pipe: pipe.left)
+
+
+def _next_pipe(pipes, bird, width):
+    if not pipes:
         return None
-    bx = bird.x if bird else w * .30
+    bx = bird.x if bird else width * .30
     # The relevant pipe is the first one not completely behind the bird.
-    ahead = [p for p in candidates if p.right >= bx - (bird.radius if bird else 8)]
+    ahead = [p for p in pipes if p.right >= bx - (bird.radius if bird else 8)]
     return min(ahead, key=lambda p: p.left) if ahead else None
 
 
-def detect(frame_bgr: np.ndarray, previous_bird: Bird | None = None) -> Observation:
+def detect(frame_bgr: np.ndarray, previous_bird: Bird | None = None, max_width: int = 320) -> Observation:
     if frame_bgr is None or frame_bgr.ndim != 3 or frame_bgr.shape[2] != 3:
         raise ValueError("Expected a BGR image with 3 channels")
+    original_h, original_w = frame_bgr.shape[:2]
+    scale = min(1.0, max_width / original_w) if max_width else 1.0
+    if scale < 1:
+        frame_bgr = cv2.resize(frame_bgr, (max_width, round(original_h * scale)), interpolation=cv2.INTER_AREA)
+        if previous_bird:
+            previous_bird = Bird(previous_bird.x * scale, previous_bird.y * scale, previous_bird.radius * scale)
     h, w = frame_bgr.shape[:2]
     hsv = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2HSV)
     # Defaults intended for yellow/orange bird + green pipes. Adjustable here for skins.
@@ -140,8 +151,14 @@ def detect(frame_bgr: np.ndarray, previous_bird: Bird | None = None) -> Observat
     pipe_mask = _color_mask(hsv, (38, 65, 45), (92, 255, 255))
     beak_mask = cv2.inRange(hsv, (0, 110, 80), (12, 255, 255)) | cv2.inRange(hsv, (170, 110, 80), (179, 255, 255))
     bird = _bird_from_mask(bird_mask, previous_bird, beak_mask)
-    pipe = _pipe_from_mask(pipe_mask, bird)
-    return Observation(bird, pipe, w, h)
+    pipes = _pipes_from_mask(pipe_mask)
+    if scale < 1:
+        if bird:
+            bird = Bird(bird.x / scale, bird.y / scale, bird.radius / scale)
+        pipes = [Pipe(round(p.left / scale), round(p.right / scale),
+                      round(p.gap_top / scale), round(p.gap_bottom / scale)) for p in pipes]
+    pipe = _next_pipe(pipes, bird, original_w)
+    return Observation(bird, pipe, original_w, original_h, tuple(pipes))
 
 
 def annotate(frame_bgr: np.ndarray, obs: Observation, status: str) -> np.ndarray:

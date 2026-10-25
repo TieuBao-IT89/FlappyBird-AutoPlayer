@@ -82,3 +82,23 @@ def test_bird_still_detected_after_jpeg_capture():
     assert obs.bird is not None and obs.pipe is not None
     assert abs(obs.bird.x - 105) < 3
     assert abs(obs.pipe.gap_top - 141) < 4
+
+
+def test_returns_following_pipe_as_well_as_the_nearest_one():
+    image = sample_scene(pipe_x=140)
+    cv2.rectangle(image, (270, 0), (315, 240), (55, 180, 55), -1)
+    cv2.rectangle(image, (270, 410), (315, 527), (55, 180, 55), -1)
+    observation = detect(image)
+    assert observation.pipe is not None
+    assert abs(observation.pipe.left - 140) < 3
+    assert len(observation.pipes) == 2
+    assert abs(observation.pipes[1].left - 270) < 3
+
+
+def test_downsampled_detection_preserves_screenshot_coordinates():
+    image = cv2.resize(sample_scene(), (720, 1200), interpolation=cv2.INTER_NEAREST)
+    observation = detect(image)
+    assert (observation.width, observation.height) == (720, 1200)
+    assert observation.bird is not None and observation.pipe is not None
+    assert abs(observation.bird.x - 210) < 5
+    assert abs(observation.pipe.left - 380) < 5
