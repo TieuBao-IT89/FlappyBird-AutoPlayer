@@ -58,10 +58,14 @@ A flap decision retains the velocity at the image timestamp until the expected d
 
 `--input-latency-ms` supplies the initial estimate for key delivery (8 ms by default). The runner also adds measured image age and planning time; the controller learns the remaining delay from pixels. `--runs` chooses the number of attempts, while `--seconds` is the total session budget. This is model-based control, without reinforcement learning or reads of game state.
 
+## Môi trường Gymnasium
+
+`rl.FlappyEnv` cung cấp mô phỏng Python độc lập để chuẩn bị huấn luyện RL: hai hành động, năm đặc trưng hình học, RNG theo seed, reward và giới hạn bước. Module chỉ nạp Gymnasium khi import `flappy_auto.rl`; bot và simulator benchmark tiếp tục dùng đường đi hiện tại. Vật lý dựa trên hằng số demo ở bước cố định 1/60 giây; không đồng nhất với mô hình benchmark có nhiễu/độ trễ hoặc browser thật. `scripts/rl_smoke.py` chạy agent ngẫu nhiên; CI chạy cả smoke và kiểm tra API Gymnasium. Xem [hướng dẫn Gymnasium](gymnasium.md) để biết đặc trưng, reward và khác biệt với demo.
+
 ## Ideas for future milestones
 
 - Broader replay/benchmark datasets and game profiles.
 - Broader theme/skin support for visual retry controls.
 - Score OCR and a dashboard comparing completed runs.
-- Self-contained reinforcement learning environment with reproducible physics and reward metrics.
+- Train and evaluate seeded RL agents using the standalone Gymnasium environment.
 - Smoke test via headless Chromium against the bundled demo.
