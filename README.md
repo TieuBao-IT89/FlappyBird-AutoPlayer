@@ -206,6 +206,57 @@ Xem toàn bộ tùy chọn:
 python -m flappy_auto --help
 ```
 
+## Ghi phiên, phát lại và benchmark
+
+Ghi toàn bộ ảnh đầu vào để tìm lỗi nhận diện mà không phải chơi lại website:
+
+```powershell
+python -m flappy_auto --demo --headless --seconds 30 --record-full artifacts\recordings
+# Hoặc ghi website với profile đã hiệu chỉnh:
+python -m flappy_auto --profile profiles\site.json --seconds 30 --record-full artifacts\recordings
+```
+
+Terminal in đường dẫn thư mục `session_*` mới cho mỗi lần mở. `--record-full` lưu ảnh PNG không mất dữ liệu, timestamp chụp/xử lý gốc, observation, lệnh đã gửi, thời gian quyết định, cấu hình/profile đang dùng, phiên bản Python/OpenCV/NumPy/Chromium và mã nguồn Git/SHA256. `session.json` có phiên bản định dạng; `events.jsonl` ghi từng frame/lệnh; `telemetry.csv` và `results.json` giữ thống kê. Không dùng chung `--record-full` với `--save-debug`, `--capture-only` hoặc `--calibrate`.
+
+Ghi ảnh và telemetry chạy nền. Khi ổ đĩa chậm, bộ ghi giữ tối đa một ảnh thô chờ, một overlay chờ và 512 sự kiện gọn; ảnh bị thay thế ghi `dropped_backpressure`, số sự kiện/lệnh mất có trong `recording_stats`. Bot tiếp tục điều khiển. `complete_images` chỉ đúng nếu toàn bộ frame được lưu; ghi đầy đủ có thể tốn nhiều dung lượng. Chế độ `--save-debug` vẫn giữ bộ đệm nhẹ: tối đa 20 JPEG ở khoảng 10 FPS trước mỗi lần kết thúc/dừng, kèm overlay mỗi giây, thay vì lưu toàn bộ ảnh.
+
+Thay `session_<tên>` bên dưới bằng thư mục thật vừa được in:
+
+```powershell
+python -m flappy_auto.replay artifacts\recordings\session_<tên> --step
+# Không mở cửa sổ; xuất CSV, JSON và báo cáo Markdown:
+python -m flappy_auto.replay artifacts\recordings\session_<tên> --headless --output artifacts\replays
+# Thử ngưỡng màu khác hoặc detector từng ảnh, xuất ảnh có vòng nhận diện:
+python -m flappy_auto.replay artifacts\recordings\session_<tên> --profile profiles\site.json --detector raw --export-images
+```
+
+Trong cửa sổ replay: **Space** tạm dừng/tiếp tục, **N** hoặc **mũi tên phải** tiến một frame và tạm dừng, **Q/Esc** thoát. `--speed 2` phát nhanh gấp đôi; `--step` mở ở trạng thái tạm dừng. Replay mặc định dùng tracker và cấu hình gốc; `--profile` chỉ thay ngưỡng nhận diện vì ảnh đã được cắt theo ROI lúc ghi.
+
+Mỗi lần phát lại tạo thư mục báo cáo mới, gồm `frames.csv`, `report.json`, `report.md` và `overlays/` nếu yêu cầu. Cùng ảnh/cấu hình/mã nguồn/thư viện sẽ cho cùng SHA256 chuỗi observation. `all_recorded_observations_match` chỉ có ý nghĩa đối chiếu chính xác khi phiên đã đóng, đủ PNG, giữ nguyên mã nguồn/thư viện/cấu hình, không sửa timestamp và không bỏ frame. JPEG của bộ đệm nhẹ hoặc phiên thiếu ảnh vẫn phân tích được, nhưng trạng thái tracker có thể khác lần chơi gốc. Ảnh thiếu/hỏng mặc định báo lỗi; `--skip-missing` cho phép bỏ qua có thống kê. Timestamp thiếu/không hợp lệ mặc định báo lỗi; `--repair-timestamps --fallback-fps 30` sửa có ghi nhận và tắt đối chiếu chính xác. Timestamp cảm biến lặp/lùi hợp lệ vẫn được giữ để kiểm tra ảnh cũ. Phiên chẩn đoán cũ chưa có `session.json` không thuộc định dạng replay này.
+
+**Replay chỉ đo nhận diện và ngữ cảnh lệnh đã gửi.** Thay detector/profile trên clip không tạo điểm hay tỷ lệ sống của bộ điều khiển mới. FPS replay là tốc độ tính nhận diện offline. Để so sánh bộ điều khiển có hành động ảnh hưởng lại thế giới, dùng benchmark mô phỏng:
+
+```powershell
+python -m flappy_auto.benchmark --config examples\benchmark.json --output artifacts\benchmarks
+# Kiểm tra nhanh, giữ cả baseline và hai chế độ tiến trình:
+python -m flappy_auto.benchmark --seeds 1 5 --runs 2 --seconds 12 --fps 30
+```
+
+Benchmark so sánh baseline `reactive` (nhảy theo độ cao/tốc độ) với `predictive` (`Strategy` hiện tại). Mỗi cặp seed/lần thử có cùng trạng thái đầu, khe ống, vật lý, nhiễu quan sát, độ trễ ảnh/phím/tính toán và ngân sách. Vật lý tích phân theo thời gian mô phỏng; thời gian CPU thực được đo riêng, không thay đổi kết quả vật lý. Đây là quan sát hình học có nhiễu trong môi trường độc lập, **không đo điểm website hoặc chất lượng OpenCV**. Chỉnh mô hình trong [cấu hình mẫu](examples/benchmark.json); file cấu hình đầy đủ được lưu lại trong mỗi báo cáo để chạy lại bằng một lệnh.
+
+`cold` mở tiến trình Python mới cho từng ván; `warm` chạy nhiều ván cùng seed/bộ điều khiển trong một tiến trình, gọi `new_run()` để giữ thông số đã học. `process_id`, `seed`, `scenario_seed`, `trial` và SHA256 quỹ đạo cho phép kiểm tra các nhóm. Tất cả lần thử, kể cả lỗi, quá hạn worker, dừng và chưa chạy, đều được xuất trong `trials.csv`/`results.json`; không chỉ chọn ván tốt nhất. `--worker-timeout` giới hạn thời gian thực của mỗi tiến trình (mặc định 300 giây); Ctrl+C vẫn xuất phần kết quả đã nhận và các lần thử chưa chạy.
+
+| Trạng thái ván | Ý nghĩa thống kê |
+| --- | --- |
+| `completed` | Va chạm thật trong mô phỏng; CLI chơi thật chỉ xác nhận khi thấy màn hình kết thúc. Có `final_score`. |
+| `time_limit` | Còn sống khi hết ngân sách; `score_so_far` là điểm quan sát, `final_score` để trống. |
+| `stopped` / `interrupted` | Dừng thủ công hoặc mất nhận diện/video đứng trong CLI; chưa biết điểm cuối. |
+| `error` / `not_run` | Lỗi hoặc lần thử chưa khởi động; vẫn giữ trong bảng. |
+
+`results.json` tách trung bình/trung vị/thấp nhất **điểm hoàn thành** khỏi điểm quan sát có giới hạn thời gian. Báo cáo ghi số mẫu, thời gian sống có giới hạn, FPS xử lý, tuổi ảnh, độ trễ cấu hình, thời gian quyết định trung bình/p95 và tỷ lệ **vượt** 20/50 (`>`). Tỷ lệ cận dưới đã quan sát dùng mọi lần thử đã khởi động, kèm số chưa biết; ván chưa hết giờ không mặc nhiên được tính là thất bại. `comparisons.csv` ghép từng cặp với baseline; chỉ tính `final_score_delta` khi cả hai ván hoàn thành. Chạy lâu hơn nếu muốn đánh giá ngưỡng điểm cao; lượt chạy ngắn hết giờ không chứng minh điểm tối đa.
+
+Xem chi tiết [định dạng và giới hạn tái lập](docs/replay-benchmark.md). Toàn bộ ảnh/báo cáo trong `artifacts/` được Git bỏ qua.
+
 ## Cấu trúc dự án
 
 ```text
@@ -218,7 +269,12 @@ FlappyBird-AutoPlayer/
 │   ├── calibration.py   # Giao diện chọn vùng game, lấy mẫu và xem mặt nạ
 │   ├── strategy.py      # Ước lượng vật lý và lập kế hoạch nhảy
 │   ├── session.py       # Theo dõi ván chơi, đếm ống và nhận diện giao diện
-│   ├── recording.py     # Lưu dữ liệu chẩn đoán và ảnh trước khi chết
+│   ├── recording.py     # Ghi phiên nền và bộ đệm ảnh trước khi chết
+│   ├── session_format.py # Định dạng phiên và kiểm tra timestamp/đường dẫn
+│   ├── replay.py        # Phát lại nhận diện, overlay và báo cáo
+│   ├── simulation.py    # Mô phỏng có phản hồi, seed và độ trễ cố định
+│   ├── benchmark.py     # So sánh baseline, tiến trình cold/warm, CSV/JSON
+│   ├── provenance.py    # Phiên bản mã nguồn và thư viện
 │   ├── workers.py       # Hiển thị và xử lý ảnh nền
 │   └── demo_server.py   # Máy chủ HTTP phục vụ bản demo trên máy
 ├── demo/
@@ -275,7 +331,7 @@ git push -u origin main
 ```
 
 
-Một số hướng phát triển tiếp: phát lại và benchmark, hỗ trợ nhiều giao diện game, đọc điểm từ ảnh bằng OCR, so sánh các bộ điều khiển, xây dựng giao diện quản lý và bổ sung kiểm thử trình duyệt vào CI.
+Một số hướng phát triển tiếp: tối ưu bộ điều khiển bằng benchmark, hỗ trợ nhiều giao diện game, đọc điểm từ ảnh bằng OCR, xây dựng giao diện quản lý và bổ sung kiểm thử trình duyệt vào CI.
 
 ## Sử dụng có trách nhiệm
 
