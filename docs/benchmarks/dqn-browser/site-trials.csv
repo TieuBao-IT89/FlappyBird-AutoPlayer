@@ -1,0 +1,7 @@
+trial,source,policy,status,score_so_far,final_score,seconds,fps,detection_failures,frames,stale_frames,inferences,blocked_decisions,mean_frame_age_ms,mean_inference_ms,reason,session
+1,website,rule,time_limit,13,,25.02,34.14,55,854,0,0,0,30.796,0.0,time_limit,01-rule\session_20261026T083746_925892Z\results.json
+1,website,dqn,completed,0,0,1.81,14.36,26,26,1,0,25,67.009,0.0,game over,01-dqn\session_20261026T083829_738429Z\results.json
+2,website,dqn,completed,0,0,1.76,26.77,47,47,0,0,46,41.162,0.0,game over,02-dqn\session_20261026T083848_939137Z\results.json
+2,website,rule,completed,0,0,3.99,17.79,43,71,0,0,0,52.387,0.0,game over,02-rule\session_20261026T083856_983836Z\results.json
+3,website,rule,completed,0,0,4.0,16.25,35,65,0,0,0,59.495,0.0,game over,03-rule\session_20261026T083906_342100Z\results.json
+3,website,dqn,completed,0,0,1.65,40.59,67,67,0,0,66,26.906,0.0,game over,03-dqn\session_20261026T083927_047925Z\results.json

@@ -22,6 +22,7 @@ Dự án sử dụng **Python, OpenCV và Playwright**, gồm bot tự chơi và
 - Có **game demo ngoại tuyến**, bộ kiểm thử bằng Pytest, CI trên GitHub Actions và giấy phép MIT.
 - Có môi trường Gymnasium độc lập và script agent ngẫu nhiên để chuẩn bị thử nghiệm RL.
 - Huấn luyện DQN bằng PyTorch/Stable-Baselines3, lưu/nạp checkpoint và đánh giá trên seed tách riêng.
+- Chọn `--policy rule|dqn` để dùng luật hiện có hoặc checkpoint DQN trên ảnh trình duyệt; có kiểm tra dữ liệu thị giác và độ trễ trước khi gửi phím.
 
 ## Cài đặt nhanh trên Windows 11 bằng PowerShell
 
@@ -63,6 +64,18 @@ Khi bật `--save-debug`, mỗi lần mở bot sẽ tạo một thư mục `sess
 Chỉ số `pipes` là số ống bot đếm từ hình ảnh, có thể khác điểm hiển thị trên website. Ván bị dừng giữa chừng được lưu kèm lý do. Bot cũng xử lý hộp thoại nhập tên có thể xuất hiện trước khi chơi lại. Các tệp chẩn đoán không được đưa vào Git.
 
 Website thực tế có thể cần hiệu chỉnh riêng vì đồ họa, lớp giao diện, bố cục canvas và vật lý khác với bản demo.
+
+### Dùng DQN đã huấn luyện trên browser
+
+Cài `python -m pip install -e ".[dev,dqn]"`, giữ checkpoint `best.zip` cùng `best.json`, rồi thử demo trước:
+
+```powershell
+python -m flappy_auto --demo --policy rule --runs 5 --debug
+python -m flappy_auto --demo --policy dqn --model artifacts/dqn/<session>/best.zip --runs 5 --debug
+python -m flappy_auto --policy dqn --model artifacts/dqn/<session>/best.zip --runs 5 --debug --save-debug artifacts/dqn-browser
+```
+
+Thay `<session>` bằng thư mục checkpoint thật. `rule` vẫn là mặc định và không cần extra DQN. Adapter tạo năm đặc trưng `float32` từ ảnh; dữ liệu cũ/thiếu/không đáng tin chặn hành động và cần đo lại vận tốc sau khi phục hồi. Không dùng trạng thái JavaScript hoặc tự gửi điểm leaderboard. Xem [hướng dẫn DQN browser](docs/dqn-browser.md) và [báo cáo so sánh](docs/benchmarks/dqn-browser/README.md); kết quả DQN hiện chưa vượt rule.
 
 ### Hiệu chỉnh màu và vùng game bằng chuột
 
@@ -338,7 +351,7 @@ Luồng khung hình Chromium → ảnh BGR mới nhất → phân tách màu HSV
 
 **Giới hạn hiện tại:** nhận diện dựa vào các màu cụ thể nên có thể nhầm nền hoặc trang phục nhân vật. Bộ điều khiển dùng mô hình vật lý đơn giản có khả năng tự hiệu chỉnh; kết quả thay đổi theo bố trí khe ống, độ trễ ảnh và tải kết xuất. Tự chơi lại dựa vào dòng chữ kết thúc màu đỏ và nút PLAY màu xanh của website; bản demo có thêm cách phát hiện game ngừng chuyển động hoặc mất dấu chim. Website khác có thể cần cách chơi lại riêng.
 
-Số ống của bot trình duyệt là ước lượng từ hình ảnh; bot chưa đọc điểm bằng OCR và không truy cập trực tiếp trạng thái nội bộ của game. Pipeline DQN huấn luyện riêng trên simulator Gymnasium, chưa đưa vào vòng điều khiển browser. Xem [tài liệu kiến trúc](docs/architecture.md) để biết cách hiệu chỉnh chi tiết.
+Số ống của bot trình duyệt là ước lượng từ hình ảnh; bot chưa đọc điểm bằng OCR và không truy cập trực tiếp trạng thái nội bộ của game. DQN huấn luyện riêng trên simulator Gymnasium, sau đó có thể suy luận từ ảnh browser bằng `--policy dqn --model PATH`. Xem [tài liệu kiến trúc](docs/architecture.md) để biết cách hiệu chỉnh chi tiết.
 
 ## Đóng góp và đẩy thay đổi lên GitHub
 

@@ -1,0 +1,7 @@
+trial,source,policy,status,score_so_far,final_score,seconds,fps,detection_failures,frames,stale_frames,inferences,blocked_decisions,mean_frame_age_ms,mean_inference_ms,reason,session
+1,website,rule,error,,,,,,,,,,,,exit 1,
+1,website,dqn,error,,,,,,,,,,,,exit 1,
+2,website,dqn,error,,,,,,,,,,,,exit 1,
+2,website,rule,error,,,,,,,,,,,,exit 1,
+3,website,rule,error,,,,,,,,,,,,exit 1,
+3,website,dqn,error,,,,,,,,,,,,exit 1,

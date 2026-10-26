@@ -1,0 +1,7 @@
+trial,source,policy,status,score_so_far,final_score,seconds,fps,detection_failures,frames,stale_frames,inferences,blocked_decisions,mean_frame_age_ms,mean_inference_ms,reason,session
+1,demo,rule,time_limit,11,,25.01,38.58,1,965,0,0,0,27.189,0.0,time_limit,01-rule\session_20261026T081343_938052Z\results.json
+1,demo,dqn,stopped,4,,11.83,45.8,42,542,0,470,71,25.436,0.772,pipe tracking lost,01-dqn\session_20261026T081420_484328Z\results.json
+2,demo,dqn,stopped,2,,6.15,44.37,35,273,33,230,42,25.459,0.789,pipe tracking lost,02-dqn\session_20261026T081444_629706Z\results.json
+2,demo,rule,time_limit,11,,25.02,37.05,1,927,0,0,0,28.589,0.0,time_limit,02-rule\session_20261026T081455_890316Z\results.json
+3,demo,rule,time_limit,11,,25.02,37.04,2,927,0,0,0,28.909,0.0,time_limit,03-rule\session_20261026T081525_776254Z\results.json
+3,demo,dqn,stopped,3,,9.74,42.6,39,415,1,355,59,27.302,0.844,pipe tracking lost,03-dqn\session_20261026T081602_867691Z\results.json

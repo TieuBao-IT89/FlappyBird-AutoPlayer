@@ -16,10 +16,30 @@ from .browser import GameBrowser, block_advertising
 from .demo_server import demo_server
 from .recording import Recorder
 from .profiles import GameProfile, VisionConfig
-from .session import RunTracker, game_over_banner, name_dialog_close
+from .session import BrowserMetrics, RunTracker, game_over_banner, name_dialog_close
 from .strategy import Strategy
 from .vision import VisionTracker, annotate
 from .workers import DebugWindow
+
+
+def make_controller(args, vision_config):
+    """Validate/load before launching a browser; rule mode needs no RL extras."""
+    if args.policy == 'rule':
+        if args.model is not None:
+            raise ValueError('--model requires --policy dqn')
+        return Strategy()
+    if args.model is None:
+        raise ValueError('--policy dqn requires --model PATH (ZIP plus matching JSON)')
+    try:
+        from .rl.dqn import load_checkpoint
+        from .rl.browser_policy import DQNController, browser_policy_hash
+    except ImportError as exc:
+        raise ValueError('DQN requires optional dependencies: pip install -e ".[dqn]"') from exc
+    model, metadata = load_checkpoint(args.model)
+    controller = DQNController(model, vision_config.tracking)
+    controller.checkpoint_metadata = metadata
+    controller.policy_source_sha256 = browser_policy_hash()
+    return controller
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -34,6 +54,8 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument('--profile', type=Path, help='Load/save a versioned game profile (calibration default: profiles/site.json or demo.json)')
     parser.add_argument('--seconds', type=float, default=120, help='Total session duration in seconds, 0 = unlimited (default: 120)')
     parser.add_argument('--runs', type=int, default=1, help='Number of games, restarting after each loss (default: 1)')
+    parser.add_argument('--policy', choices=('rule', 'dqn'), default='rule', help='Browser controller (default: rule)')
+    parser.add_argument('--model', type=Path, help='DQN checkpoint ZIP with matching JSON metadata; requires --policy dqn')
     parser.add_argument('--input-latency-ms', type=float, default=8, help='Estimated key delivery delay in milliseconds (default: 8)')
     parser.add_argument('--fps', type=float, default=60, help='Target control rate; actual rate may be lower (default: 60)')
     parser.add_argument('--viewport', type=int, nargs=2, metavar=('WIDTH', 'HEIGHT'), help='Browser viewport (default: profile viewport or 480 720)')
@@ -83,6 +105,7 @@ def run(args: argparse.Namespace) -> int:
     if (args.fps <= 0 or args.debug_fps <= 0 or args.seconds < 0 or min(args.viewport) <= 0
             or args.runs < 1 or args.input_latency_ms < 0):
         raise ValueError('--fps, --runs and viewport dimensions must be positive; durations must be nonnegative')
+    strategy = make_controller(args, vision_config)
     # Small vision frames do not benefit from scheduling a worker per CPU core.
     cv2.setNumThreads(2)
     server_context = demo_server() if args.demo else nullcontext(args.url)
@@ -100,6 +123,9 @@ def run(args: argparse.Namespace) -> int:
             recorder = None
             preview = None
             results = {'url': url, 'runs': [], 'score_method': 'visually tracked pipe crossings',
+                       'policy': args.policy, 'model': str(args.model) if args.model else None,
+                       'checkpoint': getattr(strategy, 'checkpoint_metadata', None),
+                       'policy_source_sha256': getattr(strategy, 'policy_source_sha256', None),
                        'headless': args.headless, 'debug': args.debug,
                        'target_fps': args.fps, 'viewport': list(args.viewport)}
             outcome = 'error'
@@ -158,8 +184,8 @@ def run(args: argparse.Namespace) -> int:
                     preview.show(frame)
                     preview.flush()
                     page.bring_to_front()
-                strategy = Strategy()
                 tracker = RunTracker(vision_timeout=vision_config.tracking.lost_seconds)
+                metrics = BrowserMetrics()
                 run_number = segment = 1
                 perception = VisionTracker(vision_config)
                 metadata = None
@@ -172,8 +198,11 @@ def run(args: argparse.Namespace) -> int:
                                 'frame_size': [frame.shape[1], frame.shape[0]],
                                 'mode': {'source': 'demo' if args.demo else 'website', 'url': url,
                                          'headless': args.headless, 'dry_run': args.dry_run,
+                                         'policy': args.policy, 'model': str(args.model) if args.model else None,
                                          'target_fps': args.fps, 'input_latency_ms': args.input_latency_ms},
                                 'browser_version': browser.version}
+                    metadata['checkpoint'] = results['checkpoint']
+                    metadata['policy_source_sha256'] = results['policy_source_sha256']
                 start = run_start = time.perf_counter()
                 recorder = Recorder(args.record_full or args.save_debug, full=bool(args.record_full), metadata=metadata)
                 if not args.no_start and not args.dry_run:
@@ -205,7 +234,10 @@ def run(args: argparse.Namespace) -> int:
                     obs = perception.detect(frame, observed_at, vision_speed,
                                             processed_at=processed_at,
                                             blocked_reason='game over' if banner else 'name dialog' if dialog else None)
+                    metrics.observe(obs, max(0, time.perf_counter() - observed_at))
                     if dialog and obs.fresh and not tracker.has_played and not args.dry_run:
+                        if args.policy == 'dqn':
+                            strategy.policy_decision = None
                         recorder.record(run_number, time.perf_counter()-start, processed_at-observed_at,
                                         tracker.score, frame, obs, False, strategy, captured_at=observed_at,
                                         processed_at=processed_at, vision_speed=vision_speed, segment=segment)
@@ -231,11 +263,14 @@ def run(args: argparse.Namespace) -> int:
                     reason = ('game over' if (banner or dialog) and obs.fresh else
                               tracker.update(obs, observed_at, wall_time=time.perf_counter()))
                     if reason and not args.dry_run:
+                        if args.policy == 'dqn':
+                            strategy.policy_decision = None
                         elapsed = time.perf_counter() - start
                         recorder.record(run_number, elapsed, age, tracker.score, frame, obs, False, strategy,
                                         captured_at=observed_at, processed_at=processed_at, vision_speed=vision_speed, segment=segment)
                         terminal_status = 'completed' if reason == 'game over' else 'stopped'
                         results['runs'].append({'run': run_number, 'score': tracker.score,
+                                                **metrics.summary(time.perf_counter() - run_start),
                                                 'score_so_far': tracker.score,
                                                 'final_score': tracker.score if terminal_status == 'completed' else None,
                                                 'status': terminal_status,
@@ -262,6 +297,7 @@ def run(args: argparse.Namespace) -> int:
                         segment += 1
                         strategy, tracker, perception = (strategy.new_run(), RunTracker(vision_timeout=vision_config.tracking.lost_seconds),
                                                          VisionTracker(vision_config))
+                        metrics = BrowserMetrics()
                         run_start = time.perf_counter()
                         continue
                     before_plan = time.perf_counter()
@@ -271,9 +307,16 @@ def run(args: argparse.Namespace) -> int:
                     action_sent_at = None
                     if flap and not args.dry_run:
                         action_sent_at = time.perf_counter()
-                        strategy.note_flap_sent(action_sent_at, args.input_latency_ms / 1000)
-                        game.flap()
-                        flap_count += 1
+                        if args.policy == 'dqn' and not strategy.action_is_fresh(observed_at, action_sent_at, args.input_latency_ms / 1000):
+                            flap = False
+                            action_sent_at = None
+                            strategy.policy_decision['reason'] = 'dispatch exceeded frame age'
+                            status = 'dqn: dispatch exceeded frame age'
+                        else:
+                            strategy.note_flap_sent(action_sent_at, args.input_latency_ms / 1000)
+                            game.flap()
+                            flap_count += 1
+                    metrics.decision(getattr(strategy, 'policy_decision', None))
                     tick += 1
                     render_time = time.perf_counter()
                     recorder.record(run_number, render_time - start, age, tracker.score, frame, obs,
@@ -303,6 +346,7 @@ def run(args: argparse.Namespace) -> int:
                 elapsed = time.perf_counter() - start
                 if len(results['runs']) < run_number:
                     results['runs'].append({'run': run_number, 'score': tracker.score,
+                                            **metrics.summary(time.perf_counter() - run_start),
                                             'score_so_far': tracker.score, 'final_score': None, 'status': outcome,
                                             'seconds': round(time.perf_counter() - run_start, 2), 'reason': outcome})
                     recorder.finish_run(run_number)
@@ -325,6 +369,7 @@ def run(args: argparse.Namespace) -> int:
                         try:
                             if len(results['runs']) < run_number:
                                 results['runs'].append({'run': run_number, 'score': tracker.score,
+                                                        **metrics.summary(time.perf_counter() - run_start),
                                                         'score_so_far': tracker.score, 'final_score': None, 'status': outcome,
                                                         'seconds': round(time.perf_counter() - run_start, 2), 'reason': outcome})
                                 recorder.finish_run(run_number)

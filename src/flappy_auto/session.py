@@ -115,3 +115,33 @@ class RunTracker:
         if self.active and clock - self._last_motion > max(1.2, self.vision_timeout):
             return 'game stopped moving'
         return None
+
+
+class BrowserMetrics:
+    """Constant-space counters; failures count frames, never inferred deaths."""
+
+    def __init__(self):
+        self.frames = self.detection_failures = self.stale_frames = 0
+        self.age_sum = self.inference_sum = 0.
+        self.inferences = self.blocked_decisions = 0
+
+    def observe(self, obs, age):
+        self.frames += 1
+        self.detection_failures += int(not obs.can_control or obs.pipe is None)
+        self.stale_frames += int(not obs.fresh)
+        self.age_sum += age
+
+    def decision(self, decision):
+        if decision is None:
+            return
+        if decision['action'] is not None:
+            self.inferences += 1
+            self.inference_sum += decision['inference_ms']
+        self.blocked_decisions += int(decision['reason'] != 'ready')
+
+    def summary(self, seconds):
+        return {'frames': self.frames, 'fps': round(self.frames/max(seconds, .001), 2),
+                'detection_failures': self.detection_failures, 'stale_frames': self.stale_frames,
+                'mean_frame_age_ms': round(1000*self.age_sum/max(self.frames, 1), 3),
+                'inferences': self.inferences, 'blocked_decisions': self.blocked_decisions,
+                'mean_inference_ms': round(self.inference_sum/max(self.inferences, 1), 3)}

@@ -1,0 +1,2390 @@
+[
+  {
+    "path": "01-dqn/session_20261026T081420_484328Z/session.json",
+    "metadata": {
+      "kind": "flappy-session",
+      "version": 1,
+      "recording_mode": "rolling",
+      "closed": true,
+      "vision": {
+        "bird": {
+          "lower": [
+            13,
+            75,
+            90
+          ],
+          "upper": [
+            33,
+            255,
+            255
+          ]
+        },
+        "pipe": {
+          "lower": [
+            38,
+            65,
+            45
+          ],
+          "upper": [
+            92,
+            255,
+            255
+          ]
+        },
+        "beak": {
+          "lower": [
+            170,
+            110,
+            80
+          ],
+          "upper": [
+            12,
+            255,
+            255
+          ]
+        },
+        "eye": {
+          "lower": [
+            0,
+            0,
+            210
+          ],
+          "upper": [
+            179,
+            85,
+            255
+          ]
+        },
+        "use_beak": true,
+        "use_eye": true,
+        "tracking": {
+          "min_bird_confidence": 0.75,
+          "min_pipe_confidence": 0.6,
+          "prediction_seconds": 0.12,
+          "pipe_memory_seconds": 0.3,
+          "reacquire_seconds": 0.05,
+          "expand_search_seconds": 0.3,
+          "lost_seconds": 0.8,
+          "max_frame_age": 0.2,
+          "bird_x_tolerance": 0.05,
+          "max_bird_speed": 2.0,
+          "max_gap_change": 0.04,
+          "max_pipe_shift": 0.06,
+          "motion_window_seconds": 0.3,
+          "stationary_bird_seconds": 0.22,
+          "pipe_motion_seconds": 0.12
+        }
+      },
+      "frame_size": [
+        358,
+        588
+      ],
+      "profile": {
+        "version": 1,
+        "source": "demo",
+        "url": "https://flappybird.io/",
+        "selector": "canvas",
+        "viewport": [
+          480,
+          720
+        ],
+        "roi": null,
+        "reference_size": [
+          358,
+          588
+        ],
+        "region": "element",
+        "vision": {
+          "bird": {
+            "lower": [
+              13,
+              75,
+              90
+            ],
+            "upper": [
+              33,
+              255,
+              255
+            ]
+          },
+          "pipe": {
+            "lower": [
+              38,
+              65,
+              45
+            ],
+            "upper": [
+              92,
+              255,
+              255
+            ]
+          },
+          "beak": {
+            "lower": [
+              170,
+              110,
+              80
+            ],
+            "upper": [
+              12,
+              255,
+              255
+            ]
+          },
+          "eye": {
+            "lower": [
+              0,
+              0,
+              210
+            ],
+            "upper": [
+              179,
+              85,
+              255
+            ]
+          },
+          "use_beak": true,
+          "use_eye": true,
+          "tracking": {
+            "min_bird_confidence": 0.75,
+            "min_pipe_confidence": 0.6,
+            "prediction_seconds": 0.12,
+            "pipe_memory_seconds": 0.3,
+            "reacquire_seconds": 0.05,
+            "expand_search_seconds": 0.3,
+            "lost_seconds": 0.8,
+            "max_frame_age": 0.2,
+            "bird_x_tolerance": 0.05,
+            "max_bird_speed": 2.0,
+            "max_gap_change": 0.04,
+            "max_pipe_shift": 0.06,
+            "motion_window_seconds": 0.3,
+            "stationary_bird_seconds": 0.22,
+            "pipe_motion_seconds": 0.12
+          }
+        }
+      },
+      "code": {
+        "git_revision": "dbb555d954366ba9e500a8e54bf37fd444566e11",
+        "git_dirty": true,
+        "source_sha256": "5311aa2e54f925c9693a0ec554bf3df504ed785a0ca42efc8d3e261f8ff8c5e3",
+        "package_version": "0.1.0",
+        "python": "3.11.9",
+        "platform": "Windows-10-10.0.26200-SP0",
+        "numpy": "2.4.6",
+        "opencv": "4.14.0"
+      },
+      "mode": {
+        "source": "demo",
+        "url": "http://127.0.0.1:52194/",
+        "headless": true,
+        "dry_run": false,
+        "policy": "dqn",
+        "model": "E:\\Project-OSS\\FlappyBird-AutoPlayer\\artifacts\\dqn\\dqn_20261026T053911_884931Z\\best.zip",
+        "target_fps": 60.0,
+        "input_latency_ms": 8
+      },
+      "browser_version": "156.0.8078.4",
+      "checkpoint": {
+        "kind": "flappy-dqn-checkpoint",
+        "version": 1,
+        "algorithm": "DQN",
+        "policy": "MlpPolicy",
+        "environment_version": 1,
+        "environment_sha256": "73b03162cce868dbf5f0c898ac179cb298d7fbbb513e30adf80c8f3994193948",
+        "observation_shape": [
+          5
+        ],
+        "actions": 2,
+        "device": "cpu",
+        "config": {
+          "version": 1,
+          "total_timesteps": 200000,
+          "seed": 42,
+          "training_seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ],
+          "validation_seeds": [
+            1000,
+            1001,
+            1002,
+            1003
+          ],
+          "test_seeds": [
+            2000,
+            2001,
+            2002,
+            2003,
+            2004,
+            2005,
+            2006,
+            2007,
+            2008,
+            2009,
+            2010,
+            2011,
+            2012,
+            2013,
+            2014,
+            2015,
+            2016,
+            2017,
+            2018,
+            2019
+          ],
+          "max_steps": 3600,
+          "eval_freq": 20000,
+          "learning_rate": 0.0005,
+          "buffer_size": 50000,
+          "learning_starts": 2000,
+          "batch_size": 64,
+          "gamma": 0.99,
+          "train_freq": 4,
+          "target_update_interval": 1000,
+          "exploration_fraction": 0.35,
+          "exploration_final_eps": 0.05,
+          "hidden_layers": [
+            64,
+            64
+          ],
+          "threads": 1
+        },
+        "timesteps": 140000,
+        "gradient_updates": 34499,
+        "status": "checkpoint",
+        "selection": {
+          "split": "validation",
+          "timesteps": 140000,
+          "criterion": "mean score_so_far, then mean reward",
+          "summary": {
+            "policy": "dqn",
+            "trials": 4,
+            "attempted": 4,
+            "completed": 2,
+            "time_limit": 2,
+            "errors": 0,
+            "interrupted": 0,
+            "not_run": 0,
+            "completed_final_scores": {
+              "n": 2,
+              "mean": 22.5,
+              "median": 22.5,
+              "min": 18
+            },
+            "observed_scores_including_censored": {
+              "n": 4,
+              "mean": 25.25,
+              "median": 27.5,
+              "min": 18
+            },
+            "observed_survival_capped": {
+              "n": 4,
+              "mean": 54.69583333333333,
+              "median": 58.90833333333333,
+              "min": 40.96666666666667
+            },
+            "rewards": {
+              "n": 4,
+              "mean": 57.56749999999833,
+              "median": 62.344999999997825,
+              "min": 41.57999999999997
+            },
+            "thresholds_strictly_over": {
+              "20": {
+                "observed_over": 3,
+                "known_not_over": 1,
+                "unknown": 0,
+                "observed_lower_bound_rate": 0.75
+              },
+              "50": {
+                "observed_over": 0,
+                "known_not_over": 2,
+                "unknown": 2,
+                "observed_lower_bound_rate": 0.0
+              }
+            }
+          }
+        },
+        "code": {
+          "git_revision": "55158ee355dae7f2b381bead0f2859a331272e4e",
+          "git_dirty": true,
+          "source_sha256": "81f9d115b91dddb57900affcfc97c09fed53aa1c5db989c9f1f42de159724b85",
+          "package_version": "0.1.0",
+          "python": "3.11.9",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "numpy": "2.4.6",
+          "opencv": "4.14.0",
+          "rl_source_sha256": "37a5216c3ca6530b6d366edcfda9d17eee34869e63923ba1df3be95bed1f5bac",
+          "gymnasium": "1.4.0",
+          "stable-baselines3": "2.9.0",
+          "torch": "2.14.1+cpu"
+        },
+        "model_sha256": "8395ab6a9effd3baf01736693ca0160a060911d9697292b532f623a28ddc89c7"
+      },
+      "recording_stats": {
+        "frames_seen": 542,
+        "images_requested": 105,
+        "images_saved": 20,
+        "images_dropped": 0,
+        "events_dropped": 0,
+        "actions_dropped": 0
+      },
+      "complete_images": false
+    },
+    "results": {
+      "url": "http://127.0.0.1:52194/",
+      "runs": [
+        {
+          "run": 1,
+          "score": 4,
+          "frames": 542,
+          "fps": 45.8,
+          "detection_failures": 42,
+          "stale_frames": 0,
+          "mean_frame_age_ms": 25.436,
+          "inferences": 470,
+          "blocked_decisions": 71,
+          "mean_inference_ms": 0.772,
+          "score_so_far": 4,
+          "final_score": null,
+          "status": "stopped",
+          "seconds": 11.83,
+          "reason": "pipe tracking lost"
+        }
+      ],
+      "score_method": "visually tracked pipe crossings",
+      "policy": "dqn",
+      "model": "E:\\Project-OSS\\FlappyBird-AutoPlayer\\artifacts\\dqn\\dqn_20261026T053911_884931Z\\best.zip",
+      "checkpoint": {
+        "kind": "flappy-dqn-checkpoint",
+        "version": 1,
+        "algorithm": "DQN",
+        "policy": "MlpPolicy",
+        "environment_version": 1,
+        "environment_sha256": "73b03162cce868dbf5f0c898ac179cb298d7fbbb513e30adf80c8f3994193948",
+        "observation_shape": [
+          5
+        ],
+        "actions": 2,
+        "device": "cpu",
+        "config": {
+          "version": 1,
+          "total_timesteps": 200000,
+          "seed": 42,
+          "training_seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ],
+          "validation_seeds": [
+            1000,
+            1001,
+            1002,
+            1003
+          ],
+          "test_seeds": [
+            2000,
+            2001,
+            2002,
+            2003,
+            2004,
+            2005,
+            2006,
+            2007,
+            2008,
+            2009,
+            2010,
+            2011,
+            2012,
+            2013,
+            2014,
+            2015,
+            2016,
+            2017,
+            2018,
+            2019
+          ],
+          "max_steps": 3600,
+          "eval_freq": 20000,
+          "learning_rate": 0.0005,
+          "buffer_size": 50000,
+          "learning_starts": 2000,
+          "batch_size": 64,
+          "gamma": 0.99,
+          "train_freq": 4,
+          "target_update_interval": 1000,
+          "exploration_fraction": 0.35,
+          "exploration_final_eps": 0.05,
+          "hidden_layers": [
+            64,
+            64
+          ],
+          "threads": 1
+        },
+        "timesteps": 140000,
+        "gradient_updates": 34499,
+        "status": "checkpoint",
+        "selection": {
+          "split": "validation",
+          "timesteps": 140000,
+          "criterion": "mean score_so_far, then mean reward",
+          "summary": {
+            "policy": "dqn",
+            "trials": 4,
+            "attempted": 4,
+            "completed": 2,
+            "time_limit": 2,
+            "errors": 0,
+            "interrupted": 0,
+            "not_run": 0,
+            "completed_final_scores": {
+              "n": 2,
+              "mean": 22.5,
+              "median": 22.5,
+              "min": 18
+            },
+            "observed_scores_including_censored": {
+              "n": 4,
+              "mean": 25.25,
+              "median": 27.5,
+              "min": 18
+            },
+            "observed_survival_capped": {
+              "n": 4,
+              "mean": 54.69583333333333,
+              "median": 58.90833333333333,
+              "min": 40.96666666666667
+            },
+            "rewards": {
+              "n": 4,
+              "mean": 57.56749999999833,
+              "median": 62.344999999997825,
+              "min": 41.57999999999997
+            },
+            "thresholds_strictly_over": {
+              "20": {
+                "observed_over": 3,
+                "known_not_over": 1,
+                "unknown": 0,
+                "observed_lower_bound_rate": 0.75
+              },
+              "50": {
+                "observed_over": 0,
+                "known_not_over": 2,
+                "unknown": 2,
+                "observed_lower_bound_rate": 0.0
+              }
+            }
+          }
+        },
+        "code": {
+          "git_revision": "55158ee355dae7f2b381bead0f2859a331272e4e",
+          "git_dirty": true,
+          "source_sha256": "81f9d115b91dddb57900affcfc97c09fed53aa1c5db989c9f1f42de159724b85",
+          "package_version": "0.1.0",
+          "python": "3.11.9",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "numpy": "2.4.6",
+          "opencv": "4.14.0",
+          "rl_source_sha256": "37a5216c3ca6530b6d366edcfda9d17eee34869e63923ba1df3be95bed1f5bac",
+          "gymnasium": "1.4.0",
+          "stable-baselines3": "2.9.0",
+          "torch": "2.14.1+cpu"
+        },
+        "model_sha256": "8395ab6a9effd3baf01736693ca0160a060911d9697292b532f623a28ddc89c7"
+      },
+      "headless": true,
+      "debug": false,
+      "target_fps": 60.0,
+      "viewport": [
+        480,
+        720
+      ],
+      "status": "stopped"
+    }
+  },
+  {
+    "path": "01-rule/session_20261026T081343_938052Z/session.json",
+    "metadata": {
+      "kind": "flappy-session",
+      "version": 1,
+      "recording_mode": "rolling",
+      "closed": true,
+      "vision": {
+        "bird": {
+          "lower": [
+            13,
+            75,
+            90
+          ],
+          "upper": [
+            33,
+            255,
+            255
+          ]
+        },
+        "pipe": {
+          "lower": [
+            38,
+            65,
+            45
+          ],
+          "upper": [
+            92,
+            255,
+            255
+          ]
+        },
+        "beak": {
+          "lower": [
+            170,
+            110,
+            80
+          ],
+          "upper": [
+            12,
+            255,
+            255
+          ]
+        },
+        "eye": {
+          "lower": [
+            0,
+            0,
+            210
+          ],
+          "upper": [
+            179,
+            85,
+            255
+          ]
+        },
+        "use_beak": true,
+        "use_eye": true,
+        "tracking": {
+          "min_bird_confidence": 0.75,
+          "min_pipe_confidence": 0.6,
+          "prediction_seconds": 0.12,
+          "pipe_memory_seconds": 0.3,
+          "reacquire_seconds": 0.05,
+          "expand_search_seconds": 0.3,
+          "lost_seconds": 0.8,
+          "max_frame_age": 0.2,
+          "bird_x_tolerance": 0.05,
+          "max_bird_speed": 2.0,
+          "max_gap_change": 0.04,
+          "max_pipe_shift": 0.06,
+          "motion_window_seconds": 0.3,
+          "stationary_bird_seconds": 0.22,
+          "pipe_motion_seconds": 0.12
+        }
+      },
+      "frame_size": [
+        358,
+        588
+      ],
+      "profile": {
+        "version": 1,
+        "source": "demo",
+        "url": "https://flappybird.io/",
+        "selector": "canvas",
+        "viewport": [
+          480,
+          720
+        ],
+        "roi": null,
+        "reference_size": [
+          358,
+          588
+        ],
+        "region": "element",
+        "vision": {
+          "bird": {
+            "lower": [
+              13,
+              75,
+              90
+            ],
+            "upper": [
+              33,
+              255,
+              255
+            ]
+          },
+          "pipe": {
+            "lower": [
+              38,
+              65,
+              45
+            ],
+            "upper": [
+              92,
+              255,
+              255
+            ]
+          },
+          "beak": {
+            "lower": [
+              170,
+              110,
+              80
+            ],
+            "upper": [
+              12,
+              255,
+              255
+            ]
+          },
+          "eye": {
+            "lower": [
+              0,
+              0,
+              210
+            ],
+            "upper": [
+              179,
+              85,
+              255
+            ]
+          },
+          "use_beak": true,
+          "use_eye": true,
+          "tracking": {
+            "min_bird_confidence": 0.75,
+            "min_pipe_confidence": 0.6,
+            "prediction_seconds": 0.12,
+            "pipe_memory_seconds": 0.3,
+            "reacquire_seconds": 0.05,
+            "expand_search_seconds": 0.3,
+            "lost_seconds": 0.8,
+            "max_frame_age": 0.2,
+            "bird_x_tolerance": 0.05,
+            "max_bird_speed": 2.0,
+            "max_gap_change": 0.04,
+            "max_pipe_shift": 0.06,
+            "motion_window_seconds": 0.3,
+            "stationary_bird_seconds": 0.22,
+            "pipe_motion_seconds": 0.12
+          }
+        }
+      },
+      "code": {
+        "git_revision": "dbb555d954366ba9e500a8e54bf37fd444566e11",
+        "git_dirty": true,
+        "source_sha256": "5311aa2e54f925c9693a0ec554bf3df504ed785a0ca42efc8d3e261f8ff8c5e3",
+        "package_version": "0.1.0",
+        "python": "3.11.9",
+        "platform": "Windows-10-10.0.26200-SP0",
+        "numpy": "2.4.6",
+        "opencv": "4.14.0"
+      },
+      "mode": {
+        "source": "demo",
+        "url": "http://127.0.0.1:62180/",
+        "headless": true,
+        "dry_run": false,
+        "policy": "rule",
+        "model": null,
+        "target_fps": 60.0,
+        "input_latency_ms": 8
+      },
+      "browser_version": "156.0.8078.4",
+      "checkpoint": null,
+      "recording_stats": {
+        "frames_seen": 965,
+        "images_requested": 218,
+        "images_saved": 20,
+        "images_dropped": 0,
+        "events_dropped": 0,
+        "actions_dropped": 0
+      },
+      "complete_images": false
+    },
+    "results": {
+      "url": "http://127.0.0.1:62180/",
+      "runs": [
+        {
+          "run": 1,
+          "score": 11,
+          "frames": 965,
+          "fps": 38.58,
+          "detection_failures": 1,
+          "stale_frames": 0,
+          "mean_frame_age_ms": 27.189,
+          "inferences": 0,
+          "blocked_decisions": 0,
+          "mean_inference_ms": 0.0,
+          "score_so_far": 11,
+          "final_score": null,
+          "status": "time_limit",
+          "seconds": 25.01,
+          "reason": "time_limit"
+        }
+      ],
+      "score_method": "visually tracked pipe crossings",
+      "policy": "rule",
+      "model": null,
+      "checkpoint": null,
+      "headless": true,
+      "debug": false,
+      "target_fps": 60.0,
+      "viewport": [
+        480,
+        720
+      ],
+      "status": "time_limit"
+    }
+  },
+  {
+    "path": "02-dqn/session_20261026T081444_629706Z/session.json",
+    "metadata": {
+      "kind": "flappy-session",
+      "version": 1,
+      "recording_mode": "rolling",
+      "closed": true,
+      "vision": {
+        "bird": {
+          "lower": [
+            13,
+            75,
+            90
+          ],
+          "upper": [
+            33,
+            255,
+            255
+          ]
+        },
+        "pipe": {
+          "lower": [
+            38,
+            65,
+            45
+          ],
+          "upper": [
+            92,
+            255,
+            255
+          ]
+        },
+        "beak": {
+          "lower": [
+            170,
+            110,
+            80
+          ],
+          "upper": [
+            12,
+            255,
+            255
+          ]
+        },
+        "eye": {
+          "lower": [
+            0,
+            0,
+            210
+          ],
+          "upper": [
+            179,
+            85,
+            255
+          ]
+        },
+        "use_beak": true,
+        "use_eye": true,
+        "tracking": {
+          "min_bird_confidence": 0.75,
+          "min_pipe_confidence": 0.6,
+          "prediction_seconds": 0.12,
+          "pipe_memory_seconds": 0.3,
+          "reacquire_seconds": 0.05,
+          "expand_search_seconds": 0.3,
+          "lost_seconds": 0.8,
+          "max_frame_age": 0.2,
+          "bird_x_tolerance": 0.05,
+          "max_bird_speed": 2.0,
+          "max_gap_change": 0.04,
+          "max_pipe_shift": 0.06,
+          "motion_window_seconds": 0.3,
+          "stationary_bird_seconds": 0.22,
+          "pipe_motion_seconds": 0.12
+        }
+      },
+      "frame_size": [
+        358,
+        588
+      ],
+      "profile": {
+        "version": 1,
+        "source": "demo",
+        "url": "https://flappybird.io/",
+        "selector": "canvas",
+        "viewport": [
+          480,
+          720
+        ],
+        "roi": null,
+        "reference_size": [
+          358,
+          588
+        ],
+        "region": "element",
+        "vision": {
+          "bird": {
+            "lower": [
+              13,
+              75,
+              90
+            ],
+            "upper": [
+              33,
+              255,
+              255
+            ]
+          },
+          "pipe": {
+            "lower": [
+              38,
+              65,
+              45
+            ],
+            "upper": [
+              92,
+              255,
+              255
+            ]
+          },
+          "beak": {
+            "lower": [
+              170,
+              110,
+              80
+            ],
+            "upper": [
+              12,
+              255,
+              255
+            ]
+          },
+          "eye": {
+            "lower": [
+              0,
+              0,
+              210
+            ],
+            "upper": [
+              179,
+              85,
+              255
+            ]
+          },
+          "use_beak": true,
+          "use_eye": true,
+          "tracking": {
+            "min_bird_confidence": 0.75,
+            "min_pipe_confidence": 0.6,
+            "prediction_seconds": 0.12,
+            "pipe_memory_seconds": 0.3,
+            "reacquire_seconds": 0.05,
+            "expand_search_seconds": 0.3,
+            "lost_seconds": 0.8,
+            "max_frame_age": 0.2,
+            "bird_x_tolerance": 0.05,
+            "max_bird_speed": 2.0,
+            "max_gap_change": 0.04,
+            "max_pipe_shift": 0.06,
+            "motion_window_seconds": 0.3,
+            "stationary_bird_seconds": 0.22,
+            "pipe_motion_seconds": 0.12
+          }
+        }
+      },
+      "code": {
+        "git_revision": "dbb555d954366ba9e500a8e54bf37fd444566e11",
+        "git_dirty": true,
+        "source_sha256": "5311aa2e54f925c9693a0ec554bf3df504ed785a0ca42efc8d3e261f8ff8c5e3",
+        "package_version": "0.1.0",
+        "python": "3.11.9",
+        "platform": "Windows-10-10.0.26200-SP0",
+        "numpy": "2.4.6",
+        "opencv": "4.14.0"
+      },
+      "mode": {
+        "source": "demo",
+        "url": "http://127.0.0.1:60707/",
+        "headless": true,
+        "dry_run": false,
+        "policy": "dqn",
+        "model": "E:\\Project-OSS\\FlappyBird-AutoPlayer\\artifacts\\dqn\\dqn_20261026T053911_884931Z\\best.zip",
+        "target_fps": 60.0,
+        "input_latency_ms": 8
+      },
+      "browser_version": "156.0.8078.4",
+      "checkpoint": {
+        "kind": "flappy-dqn-checkpoint",
+        "version": 1,
+        "algorithm": "DQN",
+        "policy": "MlpPolicy",
+        "environment_version": 1,
+        "environment_sha256": "73b03162cce868dbf5f0c898ac179cb298d7fbbb513e30adf80c8f3994193948",
+        "observation_shape": [
+          5
+        ],
+        "actions": 2,
+        "device": "cpu",
+        "config": {
+          "version": 1,
+          "total_timesteps": 200000,
+          "seed": 42,
+          "training_seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ],
+          "validation_seeds": [
+            1000,
+            1001,
+            1002,
+            1003
+          ],
+          "test_seeds": [
+            2000,
+            2001,
+            2002,
+            2003,
+            2004,
+            2005,
+            2006,
+            2007,
+            2008,
+            2009,
+            2010,
+            2011,
+            2012,
+            2013,
+            2014,
+            2015,
+            2016,
+            2017,
+            2018,
+            2019
+          ],
+          "max_steps": 3600,
+          "eval_freq": 20000,
+          "learning_rate": 0.0005,
+          "buffer_size": 50000,
+          "learning_starts": 2000,
+          "batch_size": 64,
+          "gamma": 0.99,
+          "train_freq": 4,
+          "target_update_interval": 1000,
+          "exploration_fraction": 0.35,
+          "exploration_final_eps": 0.05,
+          "hidden_layers": [
+            64,
+            64
+          ],
+          "threads": 1
+        },
+        "timesteps": 140000,
+        "gradient_updates": 34499,
+        "status": "checkpoint",
+        "selection": {
+          "split": "validation",
+          "timesteps": 140000,
+          "criterion": "mean score_so_far, then mean reward",
+          "summary": {
+            "policy": "dqn",
+            "trials": 4,
+            "attempted": 4,
+            "completed": 2,
+            "time_limit": 2,
+            "errors": 0,
+            "interrupted": 0,
+            "not_run": 0,
+            "completed_final_scores": {
+              "n": 2,
+              "mean": 22.5,
+              "median": 22.5,
+              "min": 18
+            },
+            "observed_scores_including_censored": {
+              "n": 4,
+              "mean": 25.25,
+              "median": 27.5,
+              "min": 18
+            },
+            "observed_survival_capped": {
+              "n": 4,
+              "mean": 54.69583333333333,
+              "median": 58.90833333333333,
+              "min": 40.96666666666667
+            },
+            "rewards": {
+              "n": 4,
+              "mean": 57.56749999999833,
+              "median": 62.344999999997825,
+              "min": 41.57999999999997
+            },
+            "thresholds_strictly_over": {
+              "20": {
+                "observed_over": 3,
+                "known_not_over": 1,
+                "unknown": 0,
+                "observed_lower_bound_rate": 0.75
+              },
+              "50": {
+                "observed_over": 0,
+                "known_not_over": 2,
+                "unknown": 2,
+                "observed_lower_bound_rate": 0.0
+              }
+            }
+          }
+        },
+        "code": {
+          "git_revision": "55158ee355dae7f2b381bead0f2859a331272e4e",
+          "git_dirty": true,
+          "source_sha256": "81f9d115b91dddb57900affcfc97c09fed53aa1c5db989c9f1f42de159724b85",
+          "package_version": "0.1.0",
+          "python": "3.11.9",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "numpy": "2.4.6",
+          "opencv": "4.14.0",
+          "rl_source_sha256": "37a5216c3ca6530b6d366edcfda9d17eee34869e63923ba1df3be95bed1f5bac",
+          "gymnasium": "1.4.0",
+          "stable-baselines3": "2.9.0",
+          "torch": "2.14.1+cpu"
+        },
+        "model_sha256": "8395ab6a9effd3baf01736693ca0160a060911d9697292b532f623a28ddc89c7"
+      },
+      "recording_stats": {
+        "frames_seen": 273,
+        "images_requested": 54,
+        "images_saved": 20,
+        "images_dropped": 0,
+        "events_dropped": 0,
+        "actions_dropped": 0
+      },
+      "complete_images": false
+    },
+    "results": {
+      "url": "http://127.0.0.1:60707/",
+      "runs": [
+        {
+          "run": 1,
+          "score": 2,
+          "frames": 273,
+          "fps": 44.37,
+          "detection_failures": 35,
+          "stale_frames": 33,
+          "mean_frame_age_ms": 25.459,
+          "inferences": 230,
+          "blocked_decisions": 42,
+          "mean_inference_ms": 0.789,
+          "score_so_far": 2,
+          "final_score": null,
+          "status": "stopped",
+          "seconds": 6.15,
+          "reason": "pipe tracking lost"
+        }
+      ],
+      "score_method": "visually tracked pipe crossings",
+      "policy": "dqn",
+      "model": "E:\\Project-OSS\\FlappyBird-AutoPlayer\\artifacts\\dqn\\dqn_20261026T053911_884931Z\\best.zip",
+      "checkpoint": {
+        "kind": "flappy-dqn-checkpoint",
+        "version": 1,
+        "algorithm": "DQN",
+        "policy": "MlpPolicy",
+        "environment_version": 1,
+        "environment_sha256": "73b03162cce868dbf5f0c898ac179cb298d7fbbb513e30adf80c8f3994193948",
+        "observation_shape": [
+          5
+        ],
+        "actions": 2,
+        "device": "cpu",
+        "config": {
+          "version": 1,
+          "total_timesteps": 200000,
+          "seed": 42,
+          "training_seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ],
+          "validation_seeds": [
+            1000,
+            1001,
+            1002,
+            1003
+          ],
+          "test_seeds": [
+            2000,
+            2001,
+            2002,
+            2003,
+            2004,
+            2005,
+            2006,
+            2007,
+            2008,
+            2009,
+            2010,
+            2011,
+            2012,
+            2013,
+            2014,
+            2015,
+            2016,
+            2017,
+            2018,
+            2019
+          ],
+          "max_steps": 3600,
+          "eval_freq": 20000,
+          "learning_rate": 0.0005,
+          "buffer_size": 50000,
+          "learning_starts": 2000,
+          "batch_size": 64,
+          "gamma": 0.99,
+          "train_freq": 4,
+          "target_update_interval": 1000,
+          "exploration_fraction": 0.35,
+          "exploration_final_eps": 0.05,
+          "hidden_layers": [
+            64,
+            64
+          ],
+          "threads": 1
+        },
+        "timesteps": 140000,
+        "gradient_updates": 34499,
+        "status": "checkpoint",
+        "selection": {
+          "split": "validation",
+          "timesteps": 140000,
+          "criterion": "mean score_so_far, then mean reward",
+          "summary": {
+            "policy": "dqn",
+            "trials": 4,
+            "attempted": 4,
+            "completed": 2,
+            "time_limit": 2,
+            "errors": 0,
+            "interrupted": 0,
+            "not_run": 0,
+            "completed_final_scores": {
+              "n": 2,
+              "mean": 22.5,
+              "median": 22.5,
+              "min": 18
+            },
+            "observed_scores_including_censored": {
+              "n": 4,
+              "mean": 25.25,
+              "median": 27.5,
+              "min": 18
+            },
+            "observed_survival_capped": {
+              "n": 4,
+              "mean": 54.69583333333333,
+              "median": 58.90833333333333,
+              "min": 40.96666666666667
+            },
+            "rewards": {
+              "n": 4,
+              "mean": 57.56749999999833,
+              "median": 62.344999999997825,
+              "min": 41.57999999999997
+            },
+            "thresholds_strictly_over": {
+              "20": {
+                "observed_over": 3,
+                "known_not_over": 1,
+                "unknown": 0,
+                "observed_lower_bound_rate": 0.75
+              },
+              "50": {
+                "observed_over": 0,
+                "known_not_over": 2,
+                "unknown": 2,
+                "observed_lower_bound_rate": 0.0
+              }
+            }
+          }
+        },
+        "code": {
+          "git_revision": "55158ee355dae7f2b381bead0f2859a331272e4e",
+          "git_dirty": true,
+          "source_sha256": "81f9d115b91dddb57900affcfc97c09fed53aa1c5db989c9f1f42de159724b85",
+          "package_version": "0.1.0",
+          "python": "3.11.9",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "numpy": "2.4.6",
+          "opencv": "4.14.0",
+          "rl_source_sha256": "37a5216c3ca6530b6d366edcfda9d17eee34869e63923ba1df3be95bed1f5bac",
+          "gymnasium": "1.4.0",
+          "stable-baselines3": "2.9.0",
+          "torch": "2.14.1+cpu"
+        },
+        "model_sha256": "8395ab6a9effd3baf01736693ca0160a060911d9697292b532f623a28ddc89c7"
+      },
+      "headless": true,
+      "debug": false,
+      "target_fps": 60.0,
+      "viewport": [
+        480,
+        720
+      ],
+      "status": "stopped"
+    }
+  },
+  {
+    "path": "02-rule/session_20261026T081455_890316Z/session.json",
+    "metadata": {
+      "kind": "flappy-session",
+      "version": 1,
+      "recording_mode": "rolling",
+      "closed": true,
+      "vision": {
+        "bird": {
+          "lower": [
+            13,
+            75,
+            90
+          ],
+          "upper": [
+            33,
+            255,
+            255
+          ]
+        },
+        "pipe": {
+          "lower": [
+            38,
+            65,
+            45
+          ],
+          "upper": [
+            92,
+            255,
+            255
+          ]
+        },
+        "beak": {
+          "lower": [
+            170,
+            110,
+            80
+          ],
+          "upper": [
+            12,
+            255,
+            255
+          ]
+        },
+        "eye": {
+          "lower": [
+            0,
+            0,
+            210
+          ],
+          "upper": [
+            179,
+            85,
+            255
+          ]
+        },
+        "use_beak": true,
+        "use_eye": true,
+        "tracking": {
+          "min_bird_confidence": 0.75,
+          "min_pipe_confidence": 0.6,
+          "prediction_seconds": 0.12,
+          "pipe_memory_seconds": 0.3,
+          "reacquire_seconds": 0.05,
+          "expand_search_seconds": 0.3,
+          "lost_seconds": 0.8,
+          "max_frame_age": 0.2,
+          "bird_x_tolerance": 0.05,
+          "max_bird_speed": 2.0,
+          "max_gap_change": 0.04,
+          "max_pipe_shift": 0.06,
+          "motion_window_seconds": 0.3,
+          "stationary_bird_seconds": 0.22,
+          "pipe_motion_seconds": 0.12
+        }
+      },
+      "frame_size": [
+        358,
+        588
+      ],
+      "profile": {
+        "version": 1,
+        "source": "demo",
+        "url": "https://flappybird.io/",
+        "selector": "canvas",
+        "viewport": [
+          480,
+          720
+        ],
+        "roi": null,
+        "reference_size": [
+          358,
+          588
+        ],
+        "region": "element",
+        "vision": {
+          "bird": {
+            "lower": [
+              13,
+              75,
+              90
+            ],
+            "upper": [
+              33,
+              255,
+              255
+            ]
+          },
+          "pipe": {
+            "lower": [
+              38,
+              65,
+              45
+            ],
+            "upper": [
+              92,
+              255,
+              255
+            ]
+          },
+          "beak": {
+            "lower": [
+              170,
+              110,
+              80
+            ],
+            "upper": [
+              12,
+              255,
+              255
+            ]
+          },
+          "eye": {
+            "lower": [
+              0,
+              0,
+              210
+            ],
+            "upper": [
+              179,
+              85,
+              255
+            ]
+          },
+          "use_beak": true,
+          "use_eye": true,
+          "tracking": {
+            "min_bird_confidence": 0.75,
+            "min_pipe_confidence": 0.6,
+            "prediction_seconds": 0.12,
+            "pipe_memory_seconds": 0.3,
+            "reacquire_seconds": 0.05,
+            "expand_search_seconds": 0.3,
+            "lost_seconds": 0.8,
+            "max_frame_age": 0.2,
+            "bird_x_tolerance": 0.05,
+            "max_bird_speed": 2.0,
+            "max_gap_change": 0.04,
+            "max_pipe_shift": 0.06,
+            "motion_window_seconds": 0.3,
+            "stationary_bird_seconds": 0.22,
+            "pipe_motion_seconds": 0.12
+          }
+        }
+      },
+      "code": {
+        "git_revision": "dbb555d954366ba9e500a8e54bf37fd444566e11",
+        "git_dirty": true,
+        "source_sha256": "5311aa2e54f925c9693a0ec554bf3df504ed785a0ca42efc8d3e261f8ff8c5e3",
+        "package_version": "0.1.0",
+        "python": "3.11.9",
+        "platform": "Windows-10-10.0.26200-SP0",
+        "numpy": "2.4.6",
+        "opencv": "4.14.0"
+      },
+      "mode": {
+        "source": "demo",
+        "url": "http://127.0.0.1:55713/",
+        "headless": true,
+        "dry_run": false,
+        "policy": "rule",
+        "model": null,
+        "target_fps": 60.0,
+        "input_latency_ms": 8
+      },
+      "browser_version": "156.0.8078.4",
+      "checkpoint": null,
+      "recording_stats": {
+        "frames_seen": 927,
+        "images_requested": 216,
+        "images_saved": 20,
+        "images_dropped": 0,
+        "events_dropped": 0,
+        "actions_dropped": 0
+      },
+      "complete_images": false
+    },
+    "results": {
+      "url": "http://127.0.0.1:55713/",
+      "runs": [
+        {
+          "run": 1,
+          "score": 11,
+          "frames": 927,
+          "fps": 37.05,
+          "detection_failures": 1,
+          "stale_frames": 0,
+          "mean_frame_age_ms": 28.589,
+          "inferences": 0,
+          "blocked_decisions": 0,
+          "mean_inference_ms": 0.0,
+          "score_so_far": 11,
+          "final_score": null,
+          "status": "time_limit",
+          "seconds": 25.02,
+          "reason": "time_limit"
+        }
+      ],
+      "score_method": "visually tracked pipe crossings",
+      "policy": "rule",
+      "model": null,
+      "checkpoint": null,
+      "headless": true,
+      "debug": false,
+      "target_fps": 60.0,
+      "viewport": [
+        480,
+        720
+      ],
+      "status": "time_limit"
+    }
+  },
+  {
+    "path": "03-dqn/session_20261026T081602_867691Z/session.json",
+    "metadata": {
+      "kind": "flappy-session",
+      "version": 1,
+      "recording_mode": "rolling",
+      "closed": true,
+      "vision": {
+        "bird": {
+          "lower": [
+            13,
+            75,
+            90
+          ],
+          "upper": [
+            33,
+            255,
+            255
+          ]
+        },
+        "pipe": {
+          "lower": [
+            38,
+            65,
+            45
+          ],
+          "upper": [
+            92,
+            255,
+            255
+          ]
+        },
+        "beak": {
+          "lower": [
+            170,
+            110,
+            80
+          ],
+          "upper": [
+            12,
+            255,
+            255
+          ]
+        },
+        "eye": {
+          "lower": [
+            0,
+            0,
+            210
+          ],
+          "upper": [
+            179,
+            85,
+            255
+          ]
+        },
+        "use_beak": true,
+        "use_eye": true,
+        "tracking": {
+          "min_bird_confidence": 0.75,
+          "min_pipe_confidence": 0.6,
+          "prediction_seconds": 0.12,
+          "pipe_memory_seconds": 0.3,
+          "reacquire_seconds": 0.05,
+          "expand_search_seconds": 0.3,
+          "lost_seconds": 0.8,
+          "max_frame_age": 0.2,
+          "bird_x_tolerance": 0.05,
+          "max_bird_speed": 2.0,
+          "max_gap_change": 0.04,
+          "max_pipe_shift": 0.06,
+          "motion_window_seconds": 0.3,
+          "stationary_bird_seconds": 0.22,
+          "pipe_motion_seconds": 0.12
+        }
+      },
+      "frame_size": [
+        358,
+        588
+      ],
+      "profile": {
+        "version": 1,
+        "source": "demo",
+        "url": "https://flappybird.io/",
+        "selector": "canvas",
+        "viewport": [
+          480,
+          720
+        ],
+        "roi": null,
+        "reference_size": [
+          358,
+          588
+        ],
+        "region": "element",
+        "vision": {
+          "bird": {
+            "lower": [
+              13,
+              75,
+              90
+            ],
+            "upper": [
+              33,
+              255,
+              255
+            ]
+          },
+          "pipe": {
+            "lower": [
+              38,
+              65,
+              45
+            ],
+            "upper": [
+              92,
+              255,
+              255
+            ]
+          },
+          "beak": {
+            "lower": [
+              170,
+              110,
+              80
+            ],
+            "upper": [
+              12,
+              255,
+              255
+            ]
+          },
+          "eye": {
+            "lower": [
+              0,
+              0,
+              210
+            ],
+            "upper": [
+              179,
+              85,
+              255
+            ]
+          },
+          "use_beak": true,
+          "use_eye": true,
+          "tracking": {
+            "min_bird_confidence": 0.75,
+            "min_pipe_confidence": 0.6,
+            "prediction_seconds": 0.12,
+            "pipe_memory_seconds": 0.3,
+            "reacquire_seconds": 0.05,
+            "expand_search_seconds": 0.3,
+            "lost_seconds": 0.8,
+            "max_frame_age": 0.2,
+            "bird_x_tolerance": 0.05,
+            "max_bird_speed": 2.0,
+            "max_gap_change": 0.04,
+            "max_pipe_shift": 0.06,
+            "motion_window_seconds": 0.3,
+            "stationary_bird_seconds": 0.22,
+            "pipe_motion_seconds": 0.12
+          }
+        }
+      },
+      "code": {
+        "git_revision": "dbb555d954366ba9e500a8e54bf37fd444566e11",
+        "git_dirty": true,
+        "source_sha256": "25e85af61cc06990b9f2b3d2cacc62cf5d184c2680e782cbff83bb6d1ab1417c",
+        "package_version": "0.1.0",
+        "python": "3.11.9",
+        "platform": "Windows-10-10.0.26200-SP0",
+        "numpy": "2.4.6",
+        "opencv": "4.14.0"
+      },
+      "mode": {
+        "source": "demo",
+        "url": "http://127.0.0.1:64020/",
+        "headless": true,
+        "dry_run": false,
+        "policy": "dqn",
+        "model": "E:\\Project-OSS\\FlappyBird-AutoPlayer\\artifacts\\dqn\\dqn_20261026T053911_884931Z\\best.zip",
+        "target_fps": 60.0,
+        "input_latency_ms": 8
+      },
+      "browser_version": "156.0.8078.4",
+      "checkpoint": {
+        "kind": "flappy-dqn-checkpoint",
+        "version": 1,
+        "algorithm": "DQN",
+        "policy": "MlpPolicy",
+        "environment_version": 1,
+        "environment_sha256": "73b03162cce868dbf5f0c898ac179cb298d7fbbb513e30adf80c8f3994193948",
+        "observation_shape": [
+          5
+        ],
+        "actions": 2,
+        "device": "cpu",
+        "config": {
+          "version": 1,
+          "total_timesteps": 200000,
+          "seed": 42,
+          "training_seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ],
+          "validation_seeds": [
+            1000,
+            1001,
+            1002,
+            1003
+          ],
+          "test_seeds": [
+            2000,
+            2001,
+            2002,
+            2003,
+            2004,
+            2005,
+            2006,
+            2007,
+            2008,
+            2009,
+            2010,
+            2011,
+            2012,
+            2013,
+            2014,
+            2015,
+            2016,
+            2017,
+            2018,
+            2019
+          ],
+          "max_steps": 3600,
+          "eval_freq": 20000,
+          "learning_rate": 0.0005,
+          "buffer_size": 50000,
+          "learning_starts": 2000,
+          "batch_size": 64,
+          "gamma": 0.99,
+          "train_freq": 4,
+          "target_update_interval": 1000,
+          "exploration_fraction": 0.35,
+          "exploration_final_eps": 0.05,
+          "hidden_layers": [
+            64,
+            64
+          ],
+          "threads": 1
+        },
+        "timesteps": 140000,
+        "gradient_updates": 34499,
+        "status": "checkpoint",
+        "selection": {
+          "split": "validation",
+          "timesteps": 140000,
+          "criterion": "mean score_so_far, then mean reward",
+          "summary": {
+            "policy": "dqn",
+            "trials": 4,
+            "attempted": 4,
+            "completed": 2,
+            "time_limit": 2,
+            "errors": 0,
+            "interrupted": 0,
+            "not_run": 0,
+            "completed_final_scores": {
+              "n": 2,
+              "mean": 22.5,
+              "median": 22.5,
+              "min": 18
+            },
+            "observed_scores_including_censored": {
+              "n": 4,
+              "mean": 25.25,
+              "median": 27.5,
+              "min": 18
+            },
+            "observed_survival_capped": {
+              "n": 4,
+              "mean": 54.69583333333333,
+              "median": 58.90833333333333,
+              "min": 40.96666666666667
+            },
+            "rewards": {
+              "n": 4,
+              "mean": 57.56749999999833,
+              "median": 62.344999999997825,
+              "min": 41.57999999999997
+            },
+            "thresholds_strictly_over": {
+              "20": {
+                "observed_over": 3,
+                "known_not_over": 1,
+                "unknown": 0,
+                "observed_lower_bound_rate": 0.75
+              },
+              "50": {
+                "observed_over": 0,
+                "known_not_over": 2,
+                "unknown": 2,
+                "observed_lower_bound_rate": 0.0
+              }
+            }
+          }
+        },
+        "code": {
+          "git_revision": "55158ee355dae7f2b381bead0f2859a331272e4e",
+          "git_dirty": true,
+          "source_sha256": "81f9d115b91dddb57900affcfc97c09fed53aa1c5db989c9f1f42de159724b85",
+          "package_version": "0.1.0",
+          "python": "3.11.9",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "numpy": "2.4.6",
+          "opencv": "4.14.0",
+          "rl_source_sha256": "37a5216c3ca6530b6d366edcfda9d17eee34869e63923ba1df3be95bed1f5bac",
+          "gymnasium": "1.4.0",
+          "stable-baselines3": "2.9.0",
+          "torch": "2.14.1+cpu"
+        },
+        "model_sha256": "8395ab6a9effd3baf01736693ca0160a060911d9697292b532f623a28ddc89c7"
+      },
+      "recording_stats": {
+        "frames_seen": 415,
+        "images_requested": 85,
+        "images_saved": 20,
+        "images_dropped": 0,
+        "events_dropped": 0,
+        "actions_dropped": 0
+      },
+      "complete_images": false
+    },
+    "results": {
+      "url": "http://127.0.0.1:64020/",
+      "runs": [
+        {
+          "run": 1,
+          "score": 3,
+          "frames": 415,
+          "fps": 42.6,
+          "detection_failures": 39,
+          "stale_frames": 1,
+          "mean_frame_age_ms": 27.302,
+          "inferences": 355,
+          "blocked_decisions": 59,
+          "mean_inference_ms": 0.844,
+          "score_so_far": 3,
+          "final_score": null,
+          "status": "stopped",
+          "seconds": 9.74,
+          "reason": "pipe tracking lost"
+        }
+      ],
+      "score_method": "visually tracked pipe crossings",
+      "policy": "dqn",
+      "model": "E:\\Project-OSS\\FlappyBird-AutoPlayer\\artifacts\\dqn\\dqn_20261026T053911_884931Z\\best.zip",
+      "checkpoint": {
+        "kind": "flappy-dqn-checkpoint",
+        "version": 1,
+        "algorithm": "DQN",
+        "policy": "MlpPolicy",
+        "environment_version": 1,
+        "environment_sha256": "73b03162cce868dbf5f0c898ac179cb298d7fbbb513e30adf80c8f3994193948",
+        "observation_shape": [
+          5
+        ],
+        "actions": 2,
+        "device": "cpu",
+        "config": {
+          "version": 1,
+          "total_timesteps": 200000,
+          "seed": 42,
+          "training_seeds": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11,
+            12,
+            13,
+            14,
+            15,
+            16,
+            17,
+            18,
+            19,
+            20,
+            21,
+            22,
+            23,
+            24,
+            25,
+            26,
+            27,
+            28,
+            29,
+            30,
+            31
+          ],
+          "validation_seeds": [
+            1000,
+            1001,
+            1002,
+            1003
+          ],
+          "test_seeds": [
+            2000,
+            2001,
+            2002,
+            2003,
+            2004,
+            2005,
+            2006,
+            2007,
+            2008,
+            2009,
+            2010,
+            2011,
+            2012,
+            2013,
+            2014,
+            2015,
+            2016,
+            2017,
+            2018,
+            2019
+          ],
+          "max_steps": 3600,
+          "eval_freq": 20000,
+          "learning_rate": 0.0005,
+          "buffer_size": 50000,
+          "learning_starts": 2000,
+          "batch_size": 64,
+          "gamma": 0.99,
+          "train_freq": 4,
+          "target_update_interval": 1000,
+          "exploration_fraction": 0.35,
+          "exploration_final_eps": 0.05,
+          "hidden_layers": [
+            64,
+            64
+          ],
+          "threads": 1
+        },
+        "timesteps": 140000,
+        "gradient_updates": 34499,
+        "status": "checkpoint",
+        "selection": {
+          "split": "validation",
+          "timesteps": 140000,
+          "criterion": "mean score_so_far, then mean reward",
+          "summary": {
+            "policy": "dqn",
+            "trials": 4,
+            "attempted": 4,
+            "completed": 2,
+            "time_limit": 2,
+            "errors": 0,
+            "interrupted": 0,
+            "not_run": 0,
+            "completed_final_scores": {
+              "n": 2,
+              "mean": 22.5,
+              "median": 22.5,
+              "min": 18
+            },
+            "observed_scores_including_censored": {
+              "n": 4,
+              "mean": 25.25,
+              "median": 27.5,
+              "min": 18
+            },
+            "observed_survival_capped": {
+              "n": 4,
+              "mean": 54.69583333333333,
+              "median": 58.90833333333333,
+              "min": 40.96666666666667
+            },
+            "rewards": {
+              "n": 4,
+              "mean": 57.56749999999833,
+              "median": 62.344999999997825,
+              "min": 41.57999999999997
+            },
+            "thresholds_strictly_over": {
+              "20": {
+                "observed_over": 3,
+                "known_not_over": 1,
+                "unknown": 0,
+                "observed_lower_bound_rate": 0.75
+              },
+              "50": {
+                "observed_over": 0,
+                "known_not_over": 2,
+                "unknown": 2,
+                "observed_lower_bound_rate": 0.0
+              }
+            }
+          }
+        },
+        "code": {
+          "git_revision": "55158ee355dae7f2b381bead0f2859a331272e4e",
+          "git_dirty": true,
+          "source_sha256": "81f9d115b91dddb57900affcfc97c09fed53aa1c5db989c9f1f42de159724b85",
+          "package_version": "0.1.0",
+          "python": "3.11.9",
+          "platform": "Windows-10-10.0.26200-SP0",
+          "numpy": "2.4.6",
+          "opencv": "4.14.0",
+          "rl_source_sha256": "37a5216c3ca6530b6d366edcfda9d17eee34869e63923ba1df3be95bed1f5bac",
+          "gymnasium": "1.4.0",
+          "stable-baselines3": "2.9.0",
+          "torch": "2.14.1+cpu"
+        },
+        "model_sha256": "8395ab6a9effd3baf01736693ca0160a060911d9697292b532f623a28ddc89c7"
+      },
+      "headless": true,
+      "debug": false,
+      "target_fps": 60.0,
+      "viewport": [
+        480,
+        720
+      ],
+      "status": "stopped"
+    }
+  },
+  {
+    "path": "03-rule/session_20261026T081525_776254Z/session.json",
+    "metadata": {
+      "kind": "flappy-session",
+      "version": 1,
+      "recording_mode": "rolling",
+      "closed": true,
+      "vision": {
+        "bird": {
+          "lower": [
+            13,
+            75,
+            90
+          ],
+          "upper": [
+            33,
+            255,
+            255
+          ]
+        },
+        "pipe": {
+          "lower": [
+            38,
+            65,
+            45
+          ],
+          "upper": [
+            92,
+            255,
+            255
+          ]
+        },
+        "beak": {
+          "lower": [
+            170,
+            110,
+            80
+          ],
+          "upper": [
+            12,
+            255,
+            255
+          ]
+        },
+        "eye": {
+          "lower": [
+            0,
+            0,
+            210
+          ],
+          "upper": [
+            179,
+            85,
+            255
+          ]
+        },
+        "use_beak": true,
+        "use_eye": true,
+        "tracking": {
+          "min_bird_confidence": 0.75,
+          "min_pipe_confidence": 0.6,
+          "prediction_seconds": 0.12,
+          "pipe_memory_seconds": 0.3,
+          "reacquire_seconds": 0.05,
+          "expand_search_seconds": 0.3,
+          "lost_seconds": 0.8,
+          "max_frame_age": 0.2,
+          "bird_x_tolerance": 0.05,
+          "max_bird_speed": 2.0,
+          "max_gap_change": 0.04,
+          "max_pipe_shift": 0.06,
+          "motion_window_seconds": 0.3,
+          "stationary_bird_seconds": 0.22,
+          "pipe_motion_seconds": 0.12
+        }
+      },
+      "frame_size": [
+        358,
+        588
+      ],
+      "profile": {
+        "version": 1,
+        "source": "demo",
+        "url": "https://flappybird.io/",
+        "selector": "canvas",
+        "viewport": [
+          480,
+          720
+        ],
+        "roi": null,
+        "reference_size": [
+          358,
+          588
+        ],
+        "region": "element",
+        "vision": {
+          "bird": {
+            "lower": [
+              13,
+              75,
+              90
+            ],
+            "upper": [
+              33,
+              255,
+              255
+            ]
+          },
+          "pipe": {
+            "lower": [
+              38,
+              65,
+              45
+            ],
+            "upper": [
+              92,
+              255,
+              255
+            ]
+          },
+          "beak": {
+            "lower": [
+              170,
+              110,
+              80
+            ],
+            "upper": [
+              12,
+              255,
+              255
+            ]
+          },
+          "eye": {
+            "lower": [
+              0,
+              0,
+              210
+            ],
+            "upper": [
+              179,
+              85,
+              255
+            ]
+          },
+          "use_beak": true,
+          "use_eye": true,
+          "tracking": {
+            "min_bird_confidence": 0.75,
+            "min_pipe_confidence": 0.6,
+            "prediction_seconds": 0.12,
+            "pipe_memory_seconds": 0.3,
+            "reacquire_seconds": 0.05,
+            "expand_search_seconds": 0.3,
+            "lost_seconds": 0.8,
+            "max_frame_age": 0.2,
+            "bird_x_tolerance": 0.05,
+            "max_bird_speed": 2.0,
+            "max_gap_change": 0.04,
+            "max_pipe_shift": 0.06,
+            "motion_window_seconds": 0.3,
+            "stationary_bird_seconds": 0.22,
+            "pipe_motion_seconds": 0.12
+          }
+        }
+      },
+      "code": {
+        "git_revision": "dbb555d954366ba9e500a8e54bf37fd444566e11",
+        "git_dirty": true,
+        "source_sha256": "25e85af61cc06990b9f2b3d2cacc62cf5d184c2680e782cbff83bb6d1ab1417c",
+        "package_version": "0.1.0",
+        "python": "3.11.9",
+        "platform": "Windows-10-10.0.26200-SP0",
+        "numpy": "2.4.6",
+        "opencv": "4.14.0"
+      },
+      "mode": {
+        "source": "demo",
+        "url": "http://127.0.0.1:52440/",
+        "headless": true,
+        "dry_run": false,
+        "policy": "rule",
+        "model": null,
+        "target_fps": 60.0,
+        "input_latency_ms": 8
+      },
+      "browser_version": "156.0.8078.4",
+      "checkpoint": null,
+      "recording_stats": {
+        "frames_seen": 927,
+        "images_requested": 215,
+        "images_saved": 20,
+        "images_dropped": 0,
+        "events_dropped": 0,
+        "actions_dropped": 0
+      },
+      "complete_images": false
+    },
+    "results": {
+      "url": "http://127.0.0.1:52440/",
+      "runs": [
+        {
+          "run": 1,
+          "score": 11,
+          "frames": 927,
+          "fps": 37.04,
+          "detection_failures": 2,
+          "stale_frames": 0,
+          "mean_frame_age_ms": 28.909,
+          "inferences": 0,
+          "blocked_decisions": 0,
+          "mean_inference_ms": 0.0,
+          "score_so_far": 11,
+          "final_score": null,
+          "status": "time_limit",
+          "seconds": 25.02,
+          "reason": "time_limit"
+        }
+      ],
+      "score_method": "visually tracked pipe crossings",
+      "policy": "rule",
+      "model": null,
+      "checkpoint": null,
+      "headless": true,
+      "debug": false,
+      "target_fps": 60.0,
+      "viewport": [
+        480,
+        720
+      ],
+      "status": "time_limit"
+    }
+  }
+]
