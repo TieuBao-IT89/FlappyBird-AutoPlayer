@@ -20,6 +20,7 @@ Dự án sử dụng **Python, OpenCV và Playwright**, gồm bot tự chơi và
 - Tùy chọn lưu dữ liệu chẩn đoán và bộ đệm ảnh khoảng hai giây trước khi chết.
 - Hỗ trợ cửa sổ gỡ lỗi, chụp ảnh, quan sát không điều khiển, bắt đầu thủ công và tùy chỉnh vùng chụp.
 - Có **game demo ngoại tuyến**, bộ kiểm thử bằng Pytest, CI trên GitHub Actions và giấy phép MIT.
+- Có môi trường Gymnasium độc lập và script agent ngẫu nhiên để chuẩn bị thử nghiệm RL.
 
 ## Cài đặt nhanh trên Windows 11 bằng PowerShell
 
@@ -29,7 +30,7 @@ Cài Python 3.11 hoặc 3.12 và Git. Mở terminal của VS Code tại thư m�
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
-pip install -e ".[dev]"
+pip install -e ".[dev,rl]"
 python -m playwright install chromium
 python -m pytest -q
 ```
@@ -257,6 +258,18 @@ Benchmark so sánh baseline `reactive` (nhảy theo độ cao/tốc độ) với
 
 Xem chi tiết [định dạng và giới hạn tái lập](docs/replay-benchmark.md). Toàn bộ ảnh/báo cáo trong `artifacts/` được Git bỏ qua.
 
+## Môi trường Gymnasium cho RL
+
+Môi trường `FlappyEnv` mô phỏng game bằng Python, nhận hai hành động thả rơi/nhảy và trả vector năm đặc trưng. Nó chạy độc lập với bot trình duyệt. Cài extra `rl` để chạy thử với agent ngẫu nhiên:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[dev,rl]"
+.\.venv\Scripts\python.exe scripts\rl_smoke.py
+.\.venv\Scripts\python.exe -m pytest tests/test_rl_environment.py -v
+```
+
+Đã có seed, reward và phân biệt va chạm (`terminated`) với hết giới hạn bước (`truncated`). Chưa có mô hình DQN đã huấn luyện; không cần PyTorch hoặc Stable-Baselines3 trong đợt này. Xem [hướng dẫn Gymnasium](docs/gymnasium.md) để biết API, công cụ kiểm tra môi trường và các giới hạn mô phỏng. Nếu chỉ chạy bot, có thể cài `pip install -e .`; toàn bộ test cần `[dev,rl]`.
+
 ## Cấu trúc dự án
 
 ```text
@@ -275,12 +288,14 @@ FlappyBird-AutoPlayer/
 │   ├── simulation.py    # Mô phỏng có phản hồi, seed và độ trễ cố định
 │   ├── benchmark.py     # So sánh baseline, tiến trình cold/warm, CSV/JSON
 │   ├── provenance.py    # Phiên bản mã nguồn và thư viện
+│   ├── rl/              # Môi trường Gymnasium độc lập cho RL
 │   ├── workers.py       # Hiển thị và xử lý ảnh nền
 │   └── demo_server.py   # Máy chủ HTTP phục vụ bản demo trên máy
 ├── demo/
 │   ├── index.html       # Trang canvas của bản demo
 │   └── game.js          # Game đơn giản tương tự Flappy Bird, tự xây dựng
 ├── tests/               # Bộ kiểm thử bằng Pytest
+├── scripts/rl_smoke.py  # Chạy một episode với agent ngẫu nhiên
 ├── docs/architecture.md
 ├── .github/workflows/ci.yml
 ├── examples/default-profile.json
