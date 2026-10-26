@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-from flappy_auto.vision import Bird, detect
+from flappy_auto.vision import Bird, Observation, Pipe, VisionTracker, detect
 
 
 def sample_scene(top=140, bottom=310, pipe_x=190):
@@ -102,3 +102,48 @@ def test_downsampled_detection_preserves_screenshot_coordinates():
     assert observation.bird is not None and observation.pipe is not None
     assert abs(observation.bird.x - 210) < 5
     assert abs(observation.pipe.left - 380) < 5
+
+
+def test_eye_and_beak_prevent_locking_onto_multicoloured_title():
+    image = sample_scene()
+    cv2.rectangle(image, (55, 130), (82, 163), (40, 210, 245), -1)
+    cv2.rectangle(image, (83, 140), (95, 157), (20, 30, 220), -1)
+    cv2.circle(image, (110, 265), 4, (255, 255, 255), -1)
+    cv2.rectangle(image, (114, 271), (124, 277), (20, 30, 220), -1)
+    observation = detect(image)
+    assert abs(observation.bird.x - 105) < 3
+
+
+def test_large_yellow_game_over_panel_is_not_a_bird():
+    image = np.zeros((720, 480, 3), np.uint8)
+    cv2.rectangle(image, (90, 220), (180, 310), (40, 210, 245), -1)
+    assert detect(image).bird is None
+
+
+def test_score_covering_the_end_of_upper_pipe_does_not_enlarge_gap():
+    image = sample_scene(top=70, bottom=230)
+    cv2.rectangle(image, (200, 26), (236, 80), (255, 255, 255), -1)
+    obs = detect(image)
+    assert obs.pipe is not None
+    assert abs(obs.pipe.gap_top - 71) <= 2
+    assert abs(obs.pipe.gap_bottom - 230) <= 2
+
+
+def test_tracks_bird_above_the_usual_score_area():
+    image = np.zeros((600, 360, 3), dtype=np.uint8)
+    cv2.circle(image, (105, 40), 12, (40, 210, 245), -1)
+    obs = detect(image, Bird(105, 55, 12))
+    assert obs.bird is not None
+    assert abs(obs.bird.y - 40) <= 2
+
+
+def test_pipe_geometry_survives_occlusion_and_resets_for_the_next_pipe():
+    tracker = VisionTracker()
+    bird = Bird(180, 140, 14)
+    for tick in range(20):
+        pipe = Pipe(300 - tick * 3, 366 - tick * 3, 70 if tick < 12 else 26, 201)
+        obs = tracker.stabilize(Observation(bird, pipe, 480, 720, (pipe,)), tick / 60, 180)
+        assert obs.pipe.gap_top == 70
+    following = Pipe(420, 480, 240, 400)
+    obs = tracker.stabilize(Observation(bird, following, 480, 720, (following,)), 20 / 60, 180)
+    assert obs.pipe.gap_top == 240

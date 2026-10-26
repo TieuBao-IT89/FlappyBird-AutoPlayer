@@ -1,0 +1,62 @@
+from types import SimpleNamespace
+
+import cv2
+import numpy as np
+import pytest
+
+from flappy_auto.browser import GameBrowser
+
+
+def test_compositor_timestamps_preserve_motion_when_delivery_is_jittery(monkeypatch):
+    received = iter([100., 100.045, 100.060])
+    monkeypatch.setattr('flappy_auto.browser.time.perf_counter', lambda: next(received))
+    browser = GameBrowser(SimpleNamespace())
+    browser._session = SimpleNamespace(send=lambda method, parameters: None)
+    for index, timestamp in enumerate([1700000000., 1700000000.016, 1700000000.032]):
+        browser._on_frame({'data': str(index), 'sessionId': index, 'metadata': {'timestamp': timestamp}})
+    assert browser._latest_time == pytest.approx(100.032, abs=.00001)
+    # Receiving a new frame must not change the timestamp of the image that
+    # the controller has already consumed.
+    assert browser.frame_time == 0
+
+
+def test_restart_uses_visible_play_button_with_canvas_and_roi_offsets():
+    clicks = []
+    page = SimpleNamespace(mouse=SimpleNamespace(click=lambda x, y: clicks.append((x, y))))
+    browser = GameBrowser(page)
+    browser._bounds = {'x': 20, 'y': 40, 'width': 520, 'height': 800}
+    frame = np.zeros((720, 480, 3), np.uint8)
+    cv2.rectangle(frame, (260, 470), (400, 520), (40, 190, 80), -1)
+    cv2.putText(frame, 'PLAY', (275, 505), cv2.FONT_HERSHEY_SIMPLEX, .8, (255, 255, 255), 2)
+    # A green pipe must not be mistaken for the retry button.
+    cv2.rectangle(frame, (50, 380), (110, 700), (40, 190, 80), -1)
+    browser.restart(frame, (10, 15, 480, 720))
+    assert len(clicks) == 1
+    assert abs(clicks[0][0] - 360) < 2
+    assert abs(clicks[0][1] - 550) < 2
+
+
+def test_restart_without_a_button_uses_space():
+    keys = []
+    browser = GameBrowser(SimpleNamespace(keyboard=SimpleNamespace(press=keys.append)))
+    browser.restart(np.zeros((600, 360, 3), np.uint8))
+    assert keys == ['Space']
+
+
+def test_restart_closes_name_dialog_before_clicking_play(monkeypatch):
+    clicks = []
+    page = SimpleNamespace(mouse=SimpleNamespace(click=lambda x, y: clicks.append((x, y))),
+                           wait_for_timeout=lambda delay: None,
+                           viewport_size={'width': 480, 'height': 720})
+    browser = GameBrowser(page)
+    dialog = np.zeros((720, 480, 3), np.uint8)
+    cv2.rectangle(dialog, (64, 248), (415, 472), (205, 231, 250), -1)
+    cv2.line(dialog, (385, 260), (395, 270), (40, 60, 80), 3)
+    cv2.line(dialog, (395, 260), (385, 270), (40, 60, 80), 3)
+    ready = np.zeros_like(dialog)
+    cv2.rectangle(ready, (260, 470), (400, 520), (40, 190, 80), -1)
+    monkeypatch.setattr(browser, 'capture', lambda roi=None: ready)
+    browser.restart(dialog)
+    assert len(clicks) == 2
+    assert abs(clicks[0][0] - 390) < 3 and abs(clicks[0][1] - 266) < 3
+    assert abs(clicks[1][0] - 330) < 2 and abs(clicks[1][1] - 495) < 2

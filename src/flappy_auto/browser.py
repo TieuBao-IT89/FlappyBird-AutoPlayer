@@ -10,6 +10,8 @@ import cv2
 import numpy as np
 from playwright.sync_api import BrowserContext, Error, Page
 
+from .session import name_dialog_close
+
 
 def block_advertising(context: BrowserContext) -> None:
     """Stop ad loaders observed on the public game, before they spawn iframes."""
@@ -30,6 +32,8 @@ class GameBrowser:
         self._bounds = None
         self._session = None
         self._latest = None
+        self._latest_time = 0.0
+        self._clock_offset = None
         self._sequence = 0
         self._consumed = 0
         self._streaming = False
@@ -56,6 +60,8 @@ class GameBrowser:
         self._bounds = best.bounding_box() if best is not None else None
         if self._session is None:
             self._session = self.page.context.new_cdp_session(self.page)
+            with suppress(Error):
+                self._session.send('Emulation.setFocusEmulationEnabled', {'enabled': True})
             self._session.on('Page.screencastFrame', self._on_frame)
             viewport = self.page.viewport_size
             self._session.send('Page.startScreencast', {
@@ -68,10 +74,20 @@ class GameBrowser:
     def _on_frame(self, event: dict) -> None:
         # Keep only the latest frame, so slow consumers cannot build a backlog.
         self._latest = event['data']
-        received = time.monotonic()
+        received = time.perf_counter()
         timestamp = event.get('metadata', {}).get('timestamp')
-        age = time.time() - timestamp if timestamp is not None else 0
-        self.frame_time = received - age if 0 <= age < 2 else received
+        if timestamp is not None:
+            # Synchronize the compositor clock with a high-resolution local
+            # clock. Python 3.10/3.11 monotonic/time on Windows can advance in
+            # 15.6 ms chunks, corrupting both frame age and fitted velocity.
+            offset = received - timestamp
+            if self._clock_offset is None or abs(offset - self._clock_offset) > 2:
+                self._clock_offset = offset
+            else:
+                self._clock_offset = min(self._clock_offset, offset)
+            self._latest_time = timestamp + self._clock_offset
+        else:
+            self._latest_time = received
         self._sequence += 1
         with suppress(Error):
             self._session.send('Page.screencastFrameAck', {'sessionId': event['sessionId']})
@@ -96,11 +112,12 @@ class GameBrowser:
             # Reusing the last image here would inflate FPS and corrupt velocity.
             if self._sequence == self._consumed:
                 self.page.wait_for_timeout(1)
-            deadline = time.monotonic() + .15
-            while self._sequence == self._consumed and time.monotonic() < deadline:
+            deadline = time.perf_counter() + .15
+            while self._sequence == self._consumed and time.perf_counter() < deadline:
                 self.page.wait_for_timeout(1)
             if self._latest is not None and self._sequence != self._consumed:
                 self._consumed = self._sequence
+                self.frame_time = self._latest_time
                 image = self._decode(self._latest)
                 sx, sy = image.shape[1] / viewport['width'], image.shape[0] / viewport['height']
                 image = image[round(y * sy):round((y + height) * sy),
@@ -110,11 +127,12 @@ class GameBrowser:
         # extend outside the viewport without cutting off part of the arena.
         if self._session is None:
             self._session = self.page.context.new_cdp_session(self.page)
+        captured_at = time.perf_counter()
         result = self._session.send('Page.captureScreenshot', {
             'format': 'jpeg', 'quality': 80, 'captureBeyondViewport': True,
             'clip': {'x': x, 'y': y, 'width': width, 'height': height, 'scale': self._screenshot_scale},
         })
-        self.frame_time = time.monotonic()
+        self.frame_time = captured_at
         image = self._decode(result['data'])
         # Headed Chromium may capture Windows display pixels at 125/150% DPI.
         if image.shape[1] != round(width):
@@ -155,3 +173,28 @@ class GameBrowser:
 
     def flap(self) -> None:
         self.page.keyboard.press('Space')
+
+    def restart(self, frame: np.ndarray, roi=None) -> None:
+        """Click a visible green PLAY button, or use the game's Space retry."""
+        close = name_dialog_close(frame)
+        if close is not None:
+            x, y, _, _ = self._rectangle(roi)
+            self.page.mouse.click(x + close[0], y + close[1])
+            self.page.wait_for_timeout(250)
+            frame = self.capture(roi)
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        mask = cv2.inRange(hsv, (32, 90, 80), (90, 255, 255))
+        h, w = mask.shape
+        mask[:int(h * .5)] = 0
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        buttons = []
+        for contour in contours:
+            x, y, bw, bh = cv2.boundingRect(contour)
+            if w * .2 < bw < w * .6 and h * .035 < bh < h * .14 and 2 < bw / bh < 5:
+                buttons.append((cv2.contourArea(contour), x + bw / 2, y + bh / 2))
+        if buttons:
+            _, bx, by = max(buttons)
+            x, y, _, _ = self._rectangle(roi)
+            self.page.mouse.click(x + bx, y + by)
+        else:
+            self.page.keyboard.press('Space')

@@ -13,8 +13,11 @@ from playwright.sync_api import sync_playwright
 
 from .browser import GameBrowser, block_advertising
 from .demo_server import demo_server
+from .recording import Recorder
+from .session import RunTracker, game_over_banner, name_dialog_close
 from .strategy import Strategy
-from .vision import annotate, detect
+from .vision import VisionTracker, annotate
+from .workers import DebugWindow
 
 
 def make_parser() -> argparse.ArgumentParser:
@@ -23,12 +26,14 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument('--url', default='https://flappybird.io/', help='Public game URL (or another compatible page)')
     parser.add_argument('--selector', default='canvas', help='CSS selector for game region, including in iframes')
     parser.add_argument('--roi', type=int, nargs=4, metavar=('X', 'Y', 'W', 'H'), help='Crop screenshot (canvas-relative, else viewport-relative)')
-    parser.add_argument('--seconds', type=float, default=40, help='Max run duration in seconds, 0 = unlimited')
+    parser.add_argument('--seconds', type=float, default=120, help='Total session duration in seconds, 0 = unlimited (default: 120)')
+    parser.add_argument('--runs', type=int, default=1, help='Number of games, restarting after each loss (default: 1)')
+    parser.add_argument('--input-latency-ms', type=float, default=8, help='Estimated key delivery delay in milliseconds (default: 8)')
     parser.add_argument('--fps', type=float, default=60, help='Target control rate; actual rate may be lower (default: 60)')
     parser.add_argument('--viewport', type=int, nargs=2, default=(480, 720), metavar=('WIDTH', 'HEIGHT'), help='Browser viewport (default: 480 720)')
     parser.add_argument('--debug', action='store_true', help='Show computer vision overlay; press Q to stop')
     parser.add_argument('--debug-fps', type=float, default=30, help='Debug window refresh rate, independent of control rate (default: 30)')
-    parser.add_argument('--save-debug', type=Path, help='Directory for occasional annotated screenshots')
+    parser.add_argument('--save-debug', type=Path, help='Save overlays, telemetry, run results and images before each loss')
     parser.add_argument('--capture-only', type=Path, help='Capture one screenshot then exit; useful for adjusting detection')
     parser.add_argument('--dry-run', action='store_true', help='Show decisions but do not press Space')
     parser.add_argument('--no-start', action='store_true', help='Do not click to start; start the game manually')
@@ -39,18 +44,28 @@ def make_parser() -> argparse.ArgumentParser:
 
 
 def run(args: argparse.Namespace) -> int:
-    if args.fps <= 0 or args.debug_fps <= 0 or args.seconds < 0 or min(args.viewport) <= 0:
-        raise ValueError('--fps and viewport dimensions must be positive; --seconds must be nonnegative')
+    if (args.fps <= 0 or args.debug_fps <= 0 or args.seconds < 0 or min(args.viewport) <= 0
+            or args.runs < 1 or args.input_latency_ms < 0):
+        raise ValueError('--fps, --runs and viewport dimensions must be positive; durations must be nonnegative')
     # Small vision frames do not benefit from scheduling a worker per CPU core.
     cv2.setNumThreads(2)
     server_context = demo_server() if args.demo else nullcontext(args.url)
     with server_context as url:
         with sync_playwright() as playwright:
-            launch_options = {'headless': args.headless}
+            launch_options = {'headless': args.headless, 'args': [
+                '--disable-background-timer-throttling',
+                '--disable-backgrounding-occluded-windows',
+                '--disable-renderer-backgrounding',
+            ]}
             if args.browser_executable:
                 launch_options['executable_path'] = str(args.browser_executable)
             browser = playwright.chromium.launch(**launch_options)
             game = None
+            recorder = None
+            preview = None
+            results = {'url': url, 'runs': [], 'score_method': 'visually tracked pipe crossings',
+                       'headless': args.headless, 'debug': args.debug,
+                       'target_fps': args.fps, 'viewport': list(args.viewport)}
             try:
                 page = browser.new_page(viewport={'width': args.viewport[0], 'height': args.viewport[1]}, device_scale_factor=1)
                 if not args.allow_ads and urlsplit(url).hostname in ('flappybird.io', 'www.flappybird.io'):
@@ -73,60 +88,124 @@ def run(args: argparse.Namespace) -> int:
                     return 0
                 if args.save_debug:
                     args.save_debug.mkdir(parents=True, exist_ok=True)
+                if args.debug:
+                    preview = DebugWindow()
+                    preview.show(frame)
+                    preview.flush()
+                    page.bring_to_front()
                 if not args.no_start and not args.dry_run:
                     game.start()
                     page.wait_for_timeout(130)
                 strategy = Strategy()
-                previous = None
-                start = time.monotonic()
+                tracker = RunTracker()
+                recorder = Recorder(args.save_debug)
+                if recorder.directory is not None:
+                    print(f'[INFO] Diagnostics: {recorder.directory.resolve()}', flush=True)
+                run_number = 1
+                model_seconds = .006
+                perception = VisionTracker()
+                start = time.perf_counter()
+                run_start = start
                 tick = 0
                 flap_count = 0
                 last_report = start
                 last_report_tick = 0
                 last_debug = last_saved = float('-inf')
                 print('[INFO] Bot running. Stop with Ctrl+C' + (' or Q in debug window.' if args.debug else '.'))
-                while not args.seconds or time.monotonic() - start < args.seconds:
-                    frame_start = time.monotonic()
+                while not args.seconds or time.perf_counter() - start < args.seconds:
+                    if preview is not None and preview.stop_requested.is_set():
+                        break
+                    frame_start = time.perf_counter()
                     frame = game.capture(roi)
                     observed_at = game.frame_time
-                    obs = detect(frame, previous)
-                    previous = obs.bird
-                    strategy.latency_seconds = max(.004, min(.15, time.monotonic() - observed_at + .004))
+                    dialog = name_dialog_close(frame) is not None
+                    if dialog and not tracker.has_played and not args.dry_run:
+                        # Some scores open a name dialog after the retry has
+                        # begun. Close it and recover this attempt without
+                        # interacting with the name field or leaderboard.
+                        game.restart(frame, roi)
+                        page.wait_for_timeout(500)
+                        game.flap()
+                        page.wait_for_timeout(130)
+                        strategy, tracker, perception = strategy.new_run(), RunTracker(), VisionTracker()
+                        continue
+                    obs = perception.detect(frame, observed_at, strategy.pipe_speed)
+                    age = max(0, time.perf_counter() - observed_at)
+                    # Include time spent planning and delivering the key, not
+                    # just the age of the image before the planner runs.
+                    strategy.latency_seconds = min(.25, age + model_seconds + args.input_latency_ms / 1000)
+                    reason = 'game over' if game_over_banner(frame) or dialog else tracker.update(obs, observed_at)
+                    if reason and not args.dry_run:
+                        elapsed = time.perf_counter() - start
+                        recorder.record(run_number, elapsed, age, tracker.score, frame, obs, False, strategy)
+                        results['runs'].append({'run': run_number, 'score': tracker.score,
+                                                'seconds': round(time.perf_counter() - run_start, 2), 'reason': reason})
+                        recorder.finish_run(run_number)
+                        print(f'[RUN {run_number}] pipes={tracker.score} reason={reason}', flush=True)
+                        if run_number >= args.runs:
+                            break
+                        # The banner appears before the retry controls finish
+                        # fading in. Wait for an actionable screen instead of
+                        # sending a key into the death animation.
+                        page.wait_for_timeout(1000)
+                        frame = game.capture(roi)
+                        game.restart(frame, roi)
+                        page.wait_for_timeout(500)
+                        game.flap()
+                        page.wait_for_timeout(130)
+                        run_number += 1
+                        strategy, tracker, perception = strategy.new_run(), RunTracker(), VisionTracker()
+                        run_start = time.perf_counter()
+                        continue
+                    before_plan = time.perf_counter()
                     flap, status = strategy.should_flap(obs, observed_at)
+                    model_seconds += .2 * (time.perf_counter() - before_plan - model_seconds)
                     if flap and not args.dry_run:
+                        strategy.note_flap_sent(time.perf_counter(), args.input_latency_ms / 1000)
                         game.flap()
                         flap_count += 1
                     tick += 1
-                    render_time = time.monotonic()
+                    render_time = time.perf_counter()
+                    recorder.record(run_number, render_time - start, age, tracker.score, frame, obs, flap, strategy)
                     show_debug = args.debug and render_time - last_debug >= 1 / args.debug_fps
                     save_debug = args.save_debug and render_time - last_saved >= 1
                     if show_debug or save_debug:
-                        overlay = annotate(frame, obs, status)
+                        overlay = annotate(frame, obs, f'run={run_number} pipes={tracker.score} | {status}')
                         if save_debug:
-                            cv2.imwrite(str(args.save_debug / f'frame_{tick:05d}.png'), overlay)
+                            recorder.overlay(tick, overlay)
                             last_saved = render_time
                         if show_debug:
                             last_debug = render_time
-                            cv2.imshow('Flappy AutoPlayer - press Q to quit', overlay)
-                            if cv2.waitKey(1) & 0xFF in (ord('q'), ord('Q')):
-                                break
-                    now = time.monotonic()
+                            preview.show(overlay)
+                    now = time.perf_counter()
                     if now - last_report > 2:
-                        print(f'[INFO] fps={(tick-last_report_tick) / (now-last_report):.1f} age={max(0, now-observed_at)*1000:.0f}ms frames={tick} flaps={flap_count} bird={bool(obs.bird)} pipe={bool(obs.pipe)} | {status}')
+                        print(f'[INFO] run={run_number} pipes={tracker.score} fps={(tick-last_report_tick) / (now-last_report):.1f} age={max(0, now-observed_at)*1000:.0f}ms | {status}', flush=True)
                         last_report = now
                         last_report_tick = tick
-                    remaining = 1 / args.fps - (time.monotonic() - frame_start)
+                    remaining = 1 / args.fps - (time.perf_counter() - frame_start)
                     if remaining > 0:
                         # Let frame events arrive while waiting for the next tick.
                         page.wait_for_timeout(remaining * 1000)
-                elapsed = time.monotonic() - start
-                print(f'[DONE] fps={tick/elapsed:.1f}, frames={tick}, flaps={flap_count}, elapsed={elapsed:.1f}s')
+                elapsed = time.perf_counter() - start
+                if len(results['runs']) < run_number:
+                    results['runs'].append({'run': run_number, 'score': tracker.score,
+                                            'seconds': round(time.perf_counter() - run_start, 2), 'reason': 'time limit / stopped'})
+                    recorder.finish_run(run_number)
+                scores = [result['score'] for result in results['runs']]
+                print(f'[DONE] best={max(scores, default=0)} mean={sum(scores)/max(1, len(scores)):.1f} '
+                      f'runs={len(scores)} fps={tick/max(.001, elapsed):.1f} flaps={flap_count} elapsed={elapsed:.1f}s', flush=True)
                 return 0
             finally:
+                if recorder is not None:
+                    if len(results['runs']) < run_number:
+                        results['runs'].append({'run': run_number, 'score': tracker.score,
+                                                'seconds': round(time.perf_counter() - run_start, 2), 'reason': 'interrupted'})
+                        recorder.finish_run(run_number)
+                    recorder.close(results)
                 if game is not None:
                     game.close()
-                if args.debug:
-                    cv2.destroyAllWindows()
+                if preview is not None:
+                    preview.close()
                 browser.close()
 
 

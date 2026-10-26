@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from collections import deque
 
 import cv2
 import numpy as np
@@ -42,22 +43,25 @@ def _color_mask(hsv: np.ndarray, lower: tuple[int, int, int], upper: tuple[int, 
 
 
 def _bird_from_mask(mask: np.ndarray, previous: Bird | None = None,
-                    beak_mask: np.ndarray | None = None) -> Bird | None:
+                    beak_mask: np.ndarray | None = None,
+                    eye_mask: np.ndarray | None = None) -> Bird | None:
     h, w = mask.shape
     # Ignore the score area and the floor. The bird lives in the left half.
     valid = mask.copy()
-    valid[: int(h * .09), :] = 0
+    valid[: int(h * (.02 if previous else .05)), :] = 0
     valid[int(h * .86) :, :] = 0
     valid[:, : int(w * .06)] = 0
     valid[:, int(w * .60) :] = 0
     contours, _ = cv2.findContours(valid, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    candidates: list[tuple[bool, float, Bird]] = []
+    candidates = []
     for contour in contours:
         area = cv2.contourArea(contour)
         x, y, cw, ch = cv2.boundingRect(contour)
         if not (max(12, w * h * .00012) < area < w * h * .015):
             continue
         if cw < 4 or ch < 4 or cw / max(ch, 1) > 3.1 or ch / max(cw, 1) > 3.0:
+            continue
+        if cw > w * .12 or ch > h * .08:
             continue
         candidate = Bird(x + cw / 2, y + ch / 2, max(cw, ch) / 2)
         if previous and abs(candidate.x - previous.x) > max(previous.radius * 2, w * .07):
@@ -68,14 +72,17 @@ def _bird_from_mask(mask: np.ndarray, previous: Bird | None = None,
         score = area - abs(candidate.x - center_x) * .48 - abs(candidate.y - center_y) * .055
         has_beak = False
         if beak_mask is not None:
-            pad = max(cw, ch)
-            nearby = beak_mask[max(0, y - pad // 2):min(h, y + ch + pad // 2),
-                               max(0, x - pad // 2):min(w, x + cw + pad // 2)]
+            nearby = beak_mask[max(0, y):min(h, y + ch),
+                               max(0, x + cw // 2):min(w, x + cw + max(3, cw // 2))]
             has_beak = np.count_nonzero(nearby) >= max(3, area * .025)
-        candidates.append((has_beak, score, candidate))
+        has_eye = False
+        if eye_mask is not None:
+            eye = eye_mask[y:y + max(1, int(ch * .65)), x + cw // 3:x + cw]
+            has_eye = np.count_nonzero(eye) >= max(3, area * .02)
+        candidates.append((has_eye and has_beak, has_beak, has_eye, score, candidate))
     if not candidates:
         return None
-    return max(candidates, key=lambda item: (item[0], item[1]))[2]
+    return max(candidates, key=lambda item: item[:-1])[-1]
 
 
 def _runs(indices: np.ndarray) -> list[tuple[int, int]]:
@@ -104,12 +111,12 @@ def _pipes_from_mask(mask: np.ndarray) -> list[Pipe]:
     for left, right in _runs(active_x):
         if right - left < max(9, int(w * .022)):
             continue
-        # Sample inner columns to avoid cap overhang and edge shadows.
-        a = left + (right - left) // 3
-        b = left + 2 * (right - left) // 3
-        strip = roi[:, max(0, a):min(w, b + 1)]
+        # The score can cover the entire middle of an upper pipe, including
+        # its bottom edge. Use surviving green pixels across the full width,
+        # rather than mistaking the white digit's edge for the pipe opening.
+        strip = roi[:, left:right]
         row_counts = np.count_nonzero(strip, axis=1)
-        green_rows = np.flatnonzero(row_counts >= max(1, strip.shape[1] * .32))
+        green_rows = np.flatnonzero(row_counts >= max(2, strip.shape[1] * .12))
         row_groups = _runs(green_rows)
         if len(row_groups) < 2:
             continue
@@ -150,7 +157,8 @@ def detect(frame_bgr: np.ndarray, previous_bird: Bird | None = None, max_width: 
     bird_mask = _color_mask(hsv, (13, 75, 90), (33, 255, 255))
     pipe_mask = _color_mask(hsv, (38, 65, 45), (92, 255, 255))
     beak_mask = cv2.inRange(hsv, (0, 110, 80), (12, 255, 255)) | cv2.inRange(hsv, (170, 110, 80), (179, 255, 255))
-    bird = _bird_from_mask(bird_mask, previous_bird, beak_mask)
+    eye_mask = cv2.inRange(hsv, (0, 0, 210), (179, 85, 255))
+    bird = _bird_from_mask(bird_mask, previous_bird, beak_mask, eye_mask)
     pipes = _pipes_from_mask(pipe_mask)
     if scale < 1:
         if bird:
@@ -159,6 +167,40 @@ def detect(frame_bgr: np.ndarray, previous_bird: Bird | None = None, max_width: 
                       round(p.gap_top / scale), round(p.gap_bottom / scale)) for p in pipes]
     pipe = _next_pipe(pipes, bird, original_w)
     return Observation(bird, pipe, original_w, original_h, tuple(pipes))
+
+
+class VisionTracker:
+    """Keep each visible pipe's geometry through temporary score occlusion."""
+
+    def __init__(self):
+        self.previous_bird = None
+        self._tracks = []
+
+    def detect(self, frame: np.ndarray, now: float, speed: float = 0) -> Observation:
+        obs = detect(frame, self.previous_bird)
+        self.previous_bird = obs.bird
+        return self.stabilize(obs, now, speed or obs.width * .35)
+
+    def stabilize(self, obs: Observation, now: float, speed: float) -> Observation:
+        remaining = [track for track in self._tracks if 0 <= now - track['seen'] < .3]
+        tracks, pipes = [], []
+        for pipe in obs.pipes or ((obs.pipe,) if obs.pipe else ()):
+            matches = [(abs(track['right'] - speed * (now - track['seen']) - pipe.right), index)
+                       for index, track in enumerate(remaining)]
+            distance, index = min(matches, default=(float('inf'), -1))
+            if distance < max(12, obs.width * .06):
+                track = remaining.pop(index)
+            else:
+                track = {'tops': deque(maxlen=120), 'bottoms': deque(maxlen=120)}
+            track['tops'].append(pipe.gap_top)
+            track['bottoms'].append(pipe.gap_bottom)
+            track.update(right=pipe.right, seen=now)
+            stable = Pipe(pipe.left, pipe.right, round(float(np.median(track['tops']))),
+                          round(float(np.median(track['bottoms']))))
+            pipes.append(stable)
+            tracks.append(track)
+        self._tracks = tracks + remaining
+        return Observation(obs.bird, _next_pipe(pipes, obs.bird, obs.width), obs.width, obs.height, tuple(pipes))
 
 
 def annotate(frame_bgr: np.ndarray, obs: Observation, status: str) -> np.ndarray:

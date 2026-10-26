@@ -5,5 +5,5 @@ if not exist ".venv\Scripts\python.exe" (
   pause
   exit /b 1
 )
-".venv\Scripts\python.exe" -m flappy_auto --debug --seconds 60
+".venv\Scripts\python.exe" -u -m flappy_auto --debug --runs 3 --seconds 0 --save-debug artifacts\latest
 pause
