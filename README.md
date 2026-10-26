@@ -338,7 +338,7 @@ Luồng khung hình Chromium → ảnh BGR mới nhất → phân tách màu HSV
 
 **Giới hạn hiện tại:** nhận diện dựa vào các màu cụ thể nên có thể nhầm nền hoặc trang phục nhân vật. Bộ điều khiển dùng mô hình vật lý đơn giản có khả năng tự hiệu chỉnh; kết quả thay đổi theo bố trí khe ống, độ trễ ảnh và tải kết xuất. Tự chơi lại dựa vào dòng chữ kết thúc màu đỏ và nút PLAY màu xanh của website; bản demo có thêm cách phát hiện game ngừng chuyển động hoặc mất dấu chim. Website khác có thể cần cách chơi lại riêng.
 
-Số ống là ước lượng từ hình ảnh; dự án chưa đọc điểm bằng OCR, chưa dùng học tăng cường và không truy cập trực tiếp trạng thái nội bộ của game. Xem [tài liệu kiến trúc](docs/architecture.md) để biết cách hiệu chỉnh chi tiết.
+Số ống của bot trình duyệt là ước lượng từ hình ảnh; bot chưa đọc điểm bằng OCR và không truy cập trực tiếp trạng thái nội bộ của game. Pipeline DQN huấn luyện riêng trên simulator Gymnasium, chưa đưa vào vòng điều khiển browser. Xem [tài liệu kiến trúc](docs/architecture.md) để biết cách hiệu chỉnh chi tiết.
 
 ## Đóng góp và đẩy thay đổi lên GitHub
 

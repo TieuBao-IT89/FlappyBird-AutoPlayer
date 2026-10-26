@@ -2,6 +2,8 @@
 
 Đợt này thêm pipeline huấn luyện mạng PyTorch trên `FlappyEnv`, lưu/nạp checkpoint `.zip`, chơi thử một episode và đánh giá trên seed tách riêng. Môi trường trả năm đặc trưng hình học; bot website vẫn dùng OpenCV và `Strategy`. DQN hiện chơi simulator Python, chưa điều khiển website từ ảnh.
 
+Đã có [kết quả mẫu 200.000 bước](benchmarks/dqn-200k/README.md), gồm toàn bộ validation/test, so sánh baseline và thông tin tái lập.
+
 ## Cài đặt trên Windows 11
 
 Tại thư mục gốc của dự án, dùng Python 3.11 trong `.venv`. Bản CPU đủ chạy mạng MLP nhỏ; cài PyTorch CPU trước để không tải phụ thuộc CUDA:

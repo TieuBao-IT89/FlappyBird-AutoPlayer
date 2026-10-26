@@ -1,6 +1,6 @@
 # Môi trường Gymnasium cho Flappy Bird
 
-`FlappyEnv` là môi trường Python độc lập, dùng làm nền cho agent RL. Nó chạy trong bộ nhớ, không mở Chromium hoặc website. Đợt này cung cấp môi trường và agent ngẫu nhiên để kiểm tra, chưa có mô hình DQN đã huấn luyện.
+`FlappyEnv` là môi trường Python độc lập, dùng làm nền cho agent RL. Nó chạy trong bộ nhớ, không mở Chromium hoặc website. Trang này hướng dẫn môi trường và agent ngẫu nhiên; phần huấn luyện và nạp mô hình nằm trong [hướng dẫn DQN](dqn.md).
 
 ## Cài đặt và chạy thử
 
