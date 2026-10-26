@@ -39,6 +39,20 @@ class GameBrowser:
         self._streaming = False
         self._screenshot_scale = 1.0
         self.frame_time = 0.0
+        self.calibration_profile = None
+        self._geometry_checked = 0.0
+
+    @property
+    def region_kind(self):
+        return 'element' if self.game_area is not None else 'viewport'
+
+    def geometry(self):
+        """Refresh CSS bounds, including layout changes since initial discovery."""
+        self._bounds = self.game_area.bounding_box() if self.game_area is not None else None
+        if self.game_area is not None and self._bounds is None:
+            raise ValueError('Game element is no longer visible. Run --calibrate again.')
+        bounds = self._bounds or self.page.viewport_size
+        return round(bounds['width']), round(bounds['height'])
 
     def locate(self) -> str:
         # Supports canvas in the main document AND inside embedded iframes.
@@ -93,11 +107,16 @@ class GameBrowser:
             self._session.send('Page.screencastFrameAck', {'sessionId': event['sessionId']})
 
     def _rectangle(self, roi):
+        if self.calibration_profile is not None and time.perf_counter() - self._geometry_checked >= 1:
+            self.calibration_profile.validate_capture(self.geometry(), self.region_kind)
+            self._geometry_checked = time.perf_counter()
         bounds = self._bounds or {**self.page.viewport_size, 'x': 0, 'y': 0}
         x, y, width, height = (bounds[key] for key in ('x', 'y', 'width', 'height'))
         if roi:
             rx, ry, width, height = roi
-            if rx < 0 or ry < 0 or width <= 0 or height <= 0 or rx + width > bounds['width'] or ry + height > bounds['height']:
+            # ROI is selected on the normalized, integer-sized CSS image.
+            # Fractional element bounds must use the same rounding as _resize.
+            if rx < 0 or ry < 0 or width <= 0 or height <= 0 or rx + width > round(bounds['width']) or ry + height > round(bounds['height']):
                 raise ValueError(f'ROI {roi} outside screenshot dimensions {bounds["width"]}x{bounds["height"]}')
             x, y = x + rx, y + ry
         return x, y, width, height

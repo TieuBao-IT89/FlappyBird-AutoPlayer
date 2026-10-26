@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 from contextlib import nullcontext
+from dataclasses import replace
 from pathlib import Path
 import sys
 import time
@@ -14,6 +15,7 @@ from playwright.sync_api import sync_playwright
 from .browser import GameBrowser, block_advertising
 from .demo_server import demo_server
 from .recording import Recorder
+from .profiles import GameProfile, VisionConfig
 from .session import RunTracker, game_over_banner, name_dialog_close
 from .strategy import Strategy
 from .vision import VisionTracker, annotate
@@ -22,15 +24,19 @@ from .workers import DebugWindow
 
 def make_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description='Play Flappy Bird visually, using OpenCV + Playwright.')
-    parser.add_argument('--demo', action='store_true', help='Use the bundled offline demo instead of flappybird.io')
-    parser.add_argument('--url', default='https://flappybird.io/', help='Public game URL (or another compatible page)')
-    parser.add_argument('--selector', default='canvas', help='CSS selector for game region, including in iframes')
-    parser.add_argument('--roi', type=int, nargs=4, metavar=('X', 'Y', 'W', 'H'), help='Crop screenshot (canvas-relative, else viewport-relative)')
+    parser.add_argument('--demo', action='store_true', default=None, help='Use the bundled offline demo instead of flappybird.io')
+    parser.add_argument('--url', help='Public game URL (default: profile URL or https://flappybird.io/)')
+    parser.add_argument('--selector', help='CSS selector for game region (default: profile selector or canvas)')
+    crop = parser.add_mutually_exclusive_group()
+    crop.add_argument('--roi', type=int, nargs=4, metavar=('X', 'Y', 'W', 'H'), help='Crop screenshot (element-relative, else viewport-relative)')
+    crop.add_argument('--full-frame', action='store_true', help='Ignore saved ROI and use the entire game screenshot')
+    parser.add_argument('--calibrate', action='store_true', help='Open interactive visual calibration, save profile, then exit')
+    parser.add_argument('--profile', type=Path, help='Load/save a versioned game profile (calibration default: profiles/site.json or demo.json)')
     parser.add_argument('--seconds', type=float, default=120, help='Total session duration in seconds, 0 = unlimited (default: 120)')
     parser.add_argument('--runs', type=int, default=1, help='Number of games, restarting after each loss (default: 1)')
     parser.add_argument('--input-latency-ms', type=float, default=8, help='Estimated key delivery delay in milliseconds (default: 8)')
     parser.add_argument('--fps', type=float, default=60, help='Target control rate; actual rate may be lower (default: 60)')
-    parser.add_argument('--viewport', type=int, nargs=2, default=(480, 720), metavar=('WIDTH', 'HEIGHT'), help='Browser viewport (default: 480 720)')
+    parser.add_argument('--viewport', type=int, nargs=2, metavar=('WIDTH', 'HEIGHT'), help='Browser viewport (default: profile viewport or 480 720)')
     parser.add_argument('--debug', action='store_true', help='Show computer vision overlay; press Q to stop')
     parser.add_argument('--debug-fps', type=float, default=30, help='Debug window refresh rate, independent of control rate (default: 30)')
     parser.add_argument('--save-debug', type=Path, help='Save overlays, telemetry, run results and images before each loss')
@@ -43,7 +49,32 @@ def make_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def resolve_profile(args: argparse.Namespace) -> GameProfile | None:
+    """Explicit CLI options > saved profile > original defaults."""
+    if args.calibrate and args.profile is None:
+        args.profile = Path('profiles/demo.json' if args.demo else 'profiles/site.json')
+    args.roi_explicit = args.roi is not None or args.full_frame
+    profile = None
+    if args.profile is not None and (args.profile.exists() or not args.calibrate):
+        profile = GameProfile.load(args.profile)
+    base = profile or GameProfile()
+    source = 'demo' if args.demo else ('website' if args.url is not None else base.source)
+    args.demo = source == 'demo'
+    args.url = args.url if args.url is not None else base.url
+    args.selector = args.selector if args.selector is not None else base.selector
+    args.viewport = tuple(args.viewport) if args.viewport is not None else base.viewport
+    args.roi = None if args.full_frame else (tuple(args.roi) if args.roi is not None else base.roi)
+    if profile is not None:
+        # Retain reference dimensions for validation; CLI overrides do not disable the guard.
+        profile = replace(profile, source=source, url=args.url, selector=args.selector, viewport=args.viewport)
+    return profile
+
+
 def run(args: argparse.Namespace) -> int:
+    profile = resolve_profile(args)
+    vision_config = profile.vision if profile is not None else VisionConfig()
+    if args.calibrate and (args.headless or args.capture_only or args.debug or args.dry_run):
+        raise ValueError('--calibrate opens its own window; do not combine it with --headless, --capture-only, --debug or --dry-run')
     if (args.fps <= 0 or args.debug_fps <= 0 or args.seconds < 0 or min(args.viewport) <= 0
             or args.runs < 1 or args.input_latency_ms < 0):
         raise ValueError('--fps, --runs and viewport dimensions must be positive; durations must be nonnegative')
@@ -79,6 +110,34 @@ def run(args: argparse.Namespace) -> int:
                 if game.game_area is None:
                     print('[WARN] No matching canvas found. Try --selector or --roi X Y W H.')
                 roi = tuple(args.roi) if args.roi else None
+                if args.calibrate:
+                    from .calibration import CalibrationSession, CalibrationWindow
+                    frame = game.capture()
+                    size = (frame.shape[1], frame.shape[0])
+                    if profile is not None and (profile.reference_size != size or profile.region != game.region_kind):
+                        print('[INFO] Layout changed; updating reference dimensions. Saved color thresholds are retained.')
+                        if not args.roi_explicit:
+                            roi = None
+                    editing = GameProfile(source='demo' if args.demo else 'website', url=args.url,
+                                          selector=args.selector, viewport=args.viewport, roi=roi,
+                                          reference_size=size, region=game.region_kind, vision=vision_config)
+                    session = CalibrationSession(frame, editing, game.region_kind)
+
+                    def capture_calibration():
+                        game.geometry()
+                        return game.capture()
+
+                    def restart_calibration():
+                        game.restart(game.capture())
+                        page.wait_for_timeout(500)
+                        game.flap()
+
+                    CalibrationWindow(session, args.profile, capture_calibration, game.start,
+                                      game.flap, restart_calibration).run()
+                    return 0
+                if profile is not None:
+                    profile.validate_capture(game.geometry(), game.region_kind)
+                    game.calibration_profile = profile
                 frame = game.capture(roi)
                 print(f'[INFO] Screenshot dimensions: {frame.shape[1]}x{frame.shape[0]}')
                 if args.capture_only:
@@ -103,7 +162,7 @@ def run(args: argparse.Namespace) -> int:
                     print(f'[INFO] Diagnostics: {recorder.directory.resolve()}', flush=True)
                 run_number = 1
                 model_seconds = .006
-                perception = VisionTracker()
+                perception = VisionTracker(vision_config)
                 start = time.perf_counter()
                 run_start = start
                 tick = 0
@@ -127,7 +186,7 @@ def run(args: argparse.Namespace) -> int:
                         page.wait_for_timeout(500)
                         game.flap()
                         page.wait_for_timeout(130)
-                        strategy, tracker, perception = strategy.new_run(), RunTracker(), VisionTracker()
+                        strategy, tracker, perception = strategy.new_run(), RunTracker(), VisionTracker(vision_config)
                         continue
                     obs = perception.detect(frame, observed_at, strategy.pipe_speed)
                     age = max(0, time.perf_counter() - observed_at)
@@ -154,7 +213,7 @@ def run(args: argparse.Namespace) -> int:
                         game.flap()
                         page.wait_for_timeout(130)
                         run_number += 1
-                        strategy, tracker, perception = strategy.new_run(), RunTracker(), VisionTracker()
+                        strategy, tracker, perception = strategy.new_run(), RunTracker(), VisionTracker(vision_config)
                         run_start = time.perf_counter()
                         continue
                     before_plan = time.perf_counter()

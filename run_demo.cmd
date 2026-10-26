@@ -5,5 +5,7 @@ if not exist ".venv\Scripts\python.exe" (
   pause
   exit /b 1
 )
-".venv\Scripts\python.exe" -m flappy_auto --demo --debug --seconds 60
+set "FLAPPY_PROFILE_ARGS="
+if exist "profiles\demo.json" set "FLAPPY_PROFILE_ARGS=--profile profiles\demo.json"
+".venv\Scripts\python.exe" -m flappy_auto --demo %FLAPPY_PROFILE_ARGS% --debug --seconds 60
 pause

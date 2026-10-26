@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "source": "website",
+  "url": "https://flappybird.io/",
+  "selector": "canvas",
+  "viewport": [480, 720],
+  "roi": null,
+  "reference_size": null,
+  "region": "element",
+  "vision": {
+    "bird": {"lower": [13, 75, 90], "upper": [33, 255, 255]},
+    "pipe": {"lower": [38, 65, 45], "upper": [92, 255, 255]},
+    "beak": {"lower": [170, 110, 80], "upper": [12, 255, 255]},
+    "eye": {"lower": [0, 0, 210], "upper": [179, 85, 255]},
+    "use_beak": true,
+    "use_eye": true
+  }
+}
