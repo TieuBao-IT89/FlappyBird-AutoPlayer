@@ -1,5 +1,7 @@
 # Ghi phiên và benchmark phiên bản 1
 
+Xem [kết quả mẫu và toàn bộ 24 lượt thử](benchmarks/README.md), cùng lệnh tái lập và phiên bản mã nguồn/thư viện.
+
 ## Hai phép đo khác nhau
 
 `python -m flappy_auto.replay` phát lại ảnh cố định qua OpenCV. Nó đánh giá observation, độ tin cậy, trạng thái phục hồi và ngữ cảnh các lệnh gốc. Khi thay profile/detector, ảnh tiếp theo vẫn là ảnh của lần chơi cũ. Vì vậy mọi báo cáo đều có `controller_scores_evaluated: false`; không tính điểm hoặc thời gian sống cho chính sách mới trên clip.
@@ -38,4 +40,4 @@ Mỗi trial luôn có một dòng, kể cả lỗi hoặc chưa chạy. Worker g
 
 Đầu ra: `config.json` đầy đủ; `results.json` có tất cả trial, tổng hợp, so sánh và provenance; `trials.csv`; `comparisons.csv`; `report.md` tiếng Việt với một lệnh chạy lại. `final_score_delta` chỉ tính khi cả hai ván va chạm; chênh lệch điểm/thời gian quan sát có nhãn giới hạn riêng. Tỷ lệ vượt 20/50 dùng `>`: ván hết giờ đã vượt ngưỡng được tính là đã quan sát thành công; ván hết giờ dưới ngưỡng còn chưa biết. Mọi lần đã thử, kể cả lỗi, vào mẫu số cận dưới; `not_run` báo riêng. Có thêm tỷ lệ chỉ trên ván hoàn thành, kèm số mẫu.
 
-`configured_fps`/`observations_per_sim_second` mô tả lịch quan sát; `processing_fps` là số lần tính trên thời gian CPU thực. `decision_ms_mean`/`decision_ms_p95` đo chi phí controller; tuổi ảnh và độ trễ cấu hình dùng ms. Hash quỹ đạo ghi các trạng thái tại thời điểm quyết định và hành động, không gồm CPU/PID. Tái lập bằng cùng `config.json`, mã nguồn và phiên bản thư viện; không yêu cầu số đo CPU khớp. Dữ liệu ảnh lớn luôn để trong `artifacts/` đã được Git bỏ qua.
+`configured_fps`/`observations_per_sim_second` mô tả lịch quan sát; `processing_fps` là số lần tính trên thời gian thực đo bằng `perf_counter`, gồm xử lý mô phỏng và controller, không gồm lúc khởi động child process. `decision_ms_mean`/`decision_ms_p95` đo thời gian xử lý riêng của controller; tuổi ảnh và độ trễ cấu hình dùng ms. Hash quỹ đạo ghi các trạng thái tại thời điểm quyết định và hành động, không gồm thời gian xử lý/PID. Tái lập bằng cùng `config.json`, mã nguồn và phiên bản thư viện; không yêu cầu số đo thời gian xử lý khớp. Dữ liệu ảnh lớn luôn để trong `artifacts/` đã được Git bỏ qua.
