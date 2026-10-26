@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 from contextlib import nullcontext
-from dataclasses import replace
+from dataclasses import asdict, replace
 from pathlib import Path
 import sys
 import time
@@ -40,6 +40,7 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument('--debug', action='store_true', help='Show computer vision overlay; press Q to stop')
     parser.add_argument('--debug-fps', type=float, default=30, help='Debug window refresh rate, independent of control rate (default: 30)')
     parser.add_argument('--save-debug', type=Path, help='Save overlays, telemetry, run results and images before each loss')
+    parser.add_argument('--record-full', type=Path, help='Record a replay session with lossless images (bounded writer; dropped frames are logged)')
     parser.add_argument('--capture-only', type=Path, help='Capture one screenshot then exit; useful for adjusting detection')
     parser.add_argument('--dry-run', action='store_true', help='Show decisions but do not press Space')
     parser.add_argument('--no-start', action='store_true', help='Do not click to start; start the game manually')
@@ -73,6 +74,10 @@ def resolve_profile(args: argparse.Namespace) -> GameProfile | None:
 def run(args: argparse.Namespace) -> int:
     profile = resolve_profile(args)
     vision_config = profile.vision if profile is not None else VisionConfig()
+    if args.record_full and args.save_debug:
+        raise ValueError('Choose either --record-full DIRECTORY or --save-debug DIRECTORY')
+    if args.record_full and (args.calibrate or args.capture_only):
+        raise ValueError('--record-full requires a bot session; do not combine it with --calibrate or --capture-only')
     if args.calibrate and (args.headless or args.capture_only or args.debug or args.dry_run):
         raise ValueError('--calibrate opens its own window; do not combine it with --headless, --capture-only, --debug or --dry-run')
     if (args.fps <= 0 or args.debug_fps <= 0 or args.seconds < 0 or min(args.viewport) <= 0
@@ -97,6 +102,7 @@ def run(args: argparse.Namespace) -> int:
             results = {'url': url, 'runs': [], 'score_method': 'visually tracked pipe crossings',
                        'headless': args.headless, 'debug': args.debug,
                        'target_fps': args.fps, 'viewport': list(args.viewport)}
+            outcome = 'error'
             try:
                 page = browser.new_page(viewport={'width': args.viewport[0], 'height': args.viewport[1]}, device_scale_factor=1)
                 if not args.allow_ads and urlsplit(url).hostname in ('flappybird.io', 'www.flappybird.io'):
@@ -152,19 +158,33 @@ def run(args: argparse.Namespace) -> int:
                     preview.show(frame)
                     preview.flush()
                     page.bring_to_front()
-                if not args.no_start and not args.dry_run:
-                    game.start()
-                    page.wait_for_timeout(130)
                 strategy = Strategy()
                 tracker = RunTracker(vision_timeout=vision_config.tracking.lost_seconds)
-                recorder = Recorder(args.save_debug)
+                run_number = segment = 1
+                perception = VisionTracker(vision_config)
+                metadata = None
+                if args.record_full or args.save_debug:
+                    from .provenance import code_info
+                    snapshot = GameProfile(source='demo' if args.demo else 'website', url=args.url,
+                                           selector=args.selector, viewport=args.viewport, roi=roi,
+                                           reference_size=game.geometry(), region=game.region_kind, vision=vision_config)
+                    metadata = {'vision': asdict(vision_config), 'profile': asdict(snapshot), 'code': code_info(),
+                                'frame_size': [frame.shape[1], frame.shape[0]],
+                                'mode': {'source': 'demo' if args.demo else 'website', 'url': url,
+                                         'headless': args.headless, 'dry_run': args.dry_run,
+                                         'target_fps': args.fps, 'input_latency_ms': args.input_latency_ms},
+                                'browser_version': browser.version}
+                start = run_start = time.perf_counter()
+                recorder = Recorder(args.record_full or args.save_debug, full=bool(args.record_full), metadata=metadata)
+                if not args.no_start and not args.dry_run:
+                    sent_at = time.perf_counter()
+                    game.start()
+                    recorder.action('start', sent_at, run_number, segment)
+                    page.wait_for_timeout(130)
                 if recorder.directory is not None:
                     print(f'[INFO] Diagnostics: {recorder.directory.resolve()}', flush=True)
-                run_number = 1
                 model_seconds = .006
-                perception = VisionTracker(vision_config)
-                start = time.perf_counter()
-                run_start = start
+                outcome = 'time_limit'
                 tick = 0
                 flap_count = 0
                 last_report = start
@@ -173,25 +193,36 @@ def run(args: argparse.Namespace) -> int:
                 print('[INFO] Bot running. Stop with Ctrl+C' + (' or Q in debug window.' if args.debug else '.'))
                 while not args.seconds or time.perf_counter() - start < args.seconds:
                     if preview is not None and preview.stop_requested.is_set():
+                        outcome = 'stopped'
                         break
                     frame_start = time.perf_counter()
                     frame = game.capture(roi)
                     observed_at = game.frame_time
                     dialog = name_dialog_close(frame) is not None
                     banner = game_over_banner(frame)
-                    obs = perception.detect(frame, observed_at, strategy.pipe_speed,
-                                            processed_at=time.perf_counter(),
+                    vision_speed = strategy.pipe_speed
+                    processed_at = time.perf_counter()
+                    obs = perception.detect(frame, observed_at, vision_speed,
+                                            processed_at=processed_at,
                                             blocked_reason='game over' if banner else 'name dialog' if dialog else None)
                     if dialog and obs.fresh and not tracker.has_played and not args.dry_run:
+                        recorder.record(run_number, time.perf_counter()-start, processed_at-observed_at,
+                                        tracker.score, frame, obs, False, strategy, captured_at=observed_at,
+                                        processed_at=processed_at, vision_speed=vision_speed, segment=segment)
                         # Some scores open a name dialog after the retry has
                         # begun. Close it and recover this attempt without
                         # interacting with the name field or leaderboard.
+                        sent_at = time.perf_counter()
                         game.restart(frame, roi)
+                        recorder.action('restart', sent_at, run_number, segment)
                         page.wait_for_timeout(500)
+                        sent_at = time.perf_counter()
                         game.flap()
+                        recorder.action('flap', sent_at, run_number, segment)
                         page.wait_for_timeout(130)
                         strategy, tracker, perception = (strategy.new_run(), RunTracker(vision_timeout=vision_config.tracking.lost_seconds),
                                                          VisionTracker(vision_config))
+                        segment += 1
                         continue
                     age = max(0, time.perf_counter() - observed_at)
                     # Include time spent planning and delivering the key, not
@@ -201,37 +232,54 @@ def run(args: argparse.Namespace) -> int:
                               tracker.update(obs, observed_at, wall_time=time.perf_counter()))
                     if reason and not args.dry_run:
                         elapsed = time.perf_counter() - start
-                        recorder.record(run_number, elapsed, age, tracker.score, frame, obs, False, strategy)
+                        recorder.record(run_number, elapsed, age, tracker.score, frame, obs, False, strategy,
+                                        captured_at=observed_at, processed_at=processed_at, vision_speed=vision_speed, segment=segment)
+                        terminal_status = 'completed' if reason == 'game over' else 'stopped'
                         results['runs'].append({'run': run_number, 'score': tracker.score,
+                                                'score_so_far': tracker.score,
+                                                'final_score': tracker.score if terminal_status == 'completed' else None,
+                                                'status': terminal_status,
                                                 'seconds': round(time.perf_counter() - run_start, 2), 'reason': reason})
                         recorder.finish_run(run_number)
                         print(f'[RUN {run_number}] pipes={tracker.score} reason={reason}', flush=True)
                         if run_number >= args.runs:
+                            outcome = terminal_status
                             break
                         # The banner appears before the retry controls finish
                         # fading in. Wait for an actionable screen instead of
                         # sending a key into the death animation.
                         page.wait_for_timeout(1000)
                         frame = game.capture(roi)
+                        sent_at = time.perf_counter()
                         game.restart(frame, roi)
+                        recorder.action('restart', sent_at, run_number, segment)
                         page.wait_for_timeout(500)
+                        sent_at = time.perf_counter()
                         game.flap()
+                        recorder.action('flap', sent_at, run_number, segment)
                         page.wait_for_timeout(130)
                         run_number += 1
+                        segment += 1
                         strategy, tracker, perception = (strategy.new_run(), RunTracker(vision_timeout=vision_config.tracking.lost_seconds),
                                                          VisionTracker(vision_config))
                         run_start = time.perf_counter()
                         continue
                     before_plan = time.perf_counter()
                     flap, status = strategy.should_flap(obs, observed_at)
-                    model_seconds += .2 * (time.perf_counter() - before_plan - model_seconds)
+                    decision_ms = (time.perf_counter()-before_plan)*1000
+                    model_seconds += .2 * (decision_ms/1000 - model_seconds)
+                    action_sent_at = None
                     if flap and not args.dry_run:
-                        strategy.note_flap_sent(time.perf_counter(), args.input_latency_ms / 1000)
+                        action_sent_at = time.perf_counter()
+                        strategy.note_flap_sent(action_sent_at, args.input_latency_ms / 1000)
                         game.flap()
                         flap_count += 1
                     tick += 1
                     render_time = time.perf_counter()
-                    recorder.record(run_number, render_time - start, age, tracker.score, frame, obs, flap, strategy)
+                    recorder.record(run_number, render_time - start, age, tracker.score, frame, obs,
+                                    flap and not args.dry_run, strategy, captured_at=observed_at,
+                                    processed_at=processed_at, vision_speed=vision_speed, action_sent_at=action_sent_at,
+                                    decision_ms=decision_ms, segment=segment)
                     show_debug = args.debug and render_time - last_debug >= 1 / args.debug_fps
                     save_debug = args.save_debug and render_time - last_saved >= 1
                     if show_debug or save_debug:
@@ -255,24 +303,42 @@ def run(args: argparse.Namespace) -> int:
                 elapsed = time.perf_counter() - start
                 if len(results['runs']) < run_number:
                     results['runs'].append({'run': run_number, 'score': tracker.score,
-                                            'seconds': round(time.perf_counter() - run_start, 2), 'reason': 'time limit / stopped'})
+                                            'score_so_far': tracker.score, 'final_score': None, 'status': outcome,
+                                            'seconds': round(time.perf_counter() - run_start, 2), 'reason': outcome})
                     recorder.finish_run(run_number)
                 scores = [result['score'] for result in results['runs']]
-                print(f'[DONE] best={max(scores, default=0)} mean={sum(scores)/max(1, len(scores)):.1f} '
+                completed = [r['final_score'] for r in results['runs'] if r['status'] == 'completed']
+                completed_mean = f'{sum(completed)/len(completed):.1f}' if completed else 'n/a'
+                print(f'[DONE] observed_best={max(scores, default=0)} observed_mean={sum(scores)/max(1, len(scores)):.1f} '
+                      f'completed_mean={completed_mean} '
                       f'runs={len(scores)} fps={tick/max(.001, elapsed):.1f} flaps={flap_count} elapsed={elapsed:.1f}s', flush=True)
                 return 0
+            except KeyboardInterrupt:
+                outcome = 'interrupted'
+                raise
+            except Exception:
+                outcome = 'error'
+                raise
             finally:
-                if recorder is not None:
-                    if len(results['runs']) < run_number:
-                        results['runs'].append({'run': run_number, 'score': tracker.score,
-                                                'seconds': round(time.perf_counter() - run_start, 2), 'reason': 'interrupted'})
-                        recorder.finish_run(run_number)
-                    recorder.close(results)
-                if game is not None:
-                    game.close()
-                if preview is not None:
-                    preview.close()
-                browser.close()
+                try:
+                    if recorder is not None:
+                        try:
+                            if len(results['runs']) < run_number:
+                                results['runs'].append({'run': run_number, 'score': tracker.score,
+                                                        'score_so_far': tracker.score, 'final_score': None, 'status': outcome,
+                                                        'seconds': round(time.perf_counter() - run_start, 2), 'reason': outcome})
+                                recorder.finish_run(run_number)
+                        finally:
+                            results['status'] = outcome
+                            recorder.close(results)
+                finally:
+                    try:
+                        if game is not None:
+                            game.close()
+                        if preview is not None:
+                            preview.close()
+                    finally:
+                        browser.close()
 
 
 def main() -> None:
