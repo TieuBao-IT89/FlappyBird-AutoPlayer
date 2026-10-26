@@ -156,7 +156,7 @@ def run(args: argparse.Namespace) -> int:
                     game.start()
                     page.wait_for_timeout(130)
                 strategy = Strategy()
-                tracker = RunTracker()
+                tracker = RunTracker(vision_timeout=vision_config.tracking.lost_seconds)
                 recorder = Recorder(args.save_debug)
                 if recorder.directory is not None:
                     print(f'[INFO] Diagnostics: {recorder.directory.resolve()}', flush=True)
@@ -178,7 +178,11 @@ def run(args: argparse.Namespace) -> int:
                     frame = game.capture(roi)
                     observed_at = game.frame_time
                     dialog = name_dialog_close(frame) is not None
-                    if dialog and not tracker.has_played and not args.dry_run:
+                    banner = game_over_banner(frame)
+                    obs = perception.detect(frame, observed_at, strategy.pipe_speed,
+                                            processed_at=time.perf_counter(),
+                                            blocked_reason='game over' if banner else 'name dialog' if dialog else None)
+                    if dialog and obs.fresh and not tracker.has_played and not args.dry_run:
                         # Some scores open a name dialog after the retry has
                         # begun. Close it and recover this attempt without
                         # interacting with the name field or leaderboard.
@@ -186,14 +190,15 @@ def run(args: argparse.Namespace) -> int:
                         page.wait_for_timeout(500)
                         game.flap()
                         page.wait_for_timeout(130)
-                        strategy, tracker, perception = strategy.new_run(), RunTracker(), VisionTracker(vision_config)
+                        strategy, tracker, perception = (strategy.new_run(), RunTracker(vision_timeout=vision_config.tracking.lost_seconds),
+                                                         VisionTracker(vision_config))
                         continue
-                    obs = perception.detect(frame, observed_at, strategy.pipe_speed)
                     age = max(0, time.perf_counter() - observed_at)
                     # Include time spent planning and delivering the key, not
                     # just the age of the image before the planner runs.
                     strategy.latency_seconds = min(.25, age + model_seconds + args.input_latency_ms / 1000)
-                    reason = 'game over' if game_over_banner(frame) or dialog else tracker.update(obs, observed_at)
+                    reason = ('game over' if (banner or dialog) and obs.fresh else
+                              tracker.update(obs, observed_at, wall_time=time.perf_counter()))
                     if reason and not args.dry_run:
                         elapsed = time.perf_counter() - start
                         recorder.record(run_number, elapsed, age, tracker.score, frame, obs, False, strategy)
@@ -213,7 +218,8 @@ def run(args: argparse.Namespace) -> int:
                         game.flap()
                         page.wait_for_timeout(130)
                         run_number += 1
-                        strategy, tracker, perception = strategy.new_run(), RunTracker(), VisionTracker(vision_config)
+                        strategy, tracker, perception = (strategy.new_run(), RunTracker(vision_timeout=vision_config.tracking.lost_seconds),
+                                                         VisionTracker(vision_config))
                         run_start = time.perf_counter()
                         continue
                     before_plan = time.perf_counter()
@@ -238,7 +244,8 @@ def run(args: argparse.Namespace) -> int:
                             preview.show(overlay)
                     now = time.perf_counter()
                     if now - last_report > 2:
-                        print(f'[INFO] run={run_number} pipes={tracker.score} fps={(tick-last_report_tick) / (now-last_report):.1f} age={max(0, now-observed_at)*1000:.0f}ms | {status}', flush=True)
+                        print(f'[INFO] run={run_number} pipes={tracker.score} fps={(tick-last_report_tick) / (now-last_report):.1f} age={max(0, now-observed_at)*1000:.0f}ms '
+                              f'vision={obs.state} B={obs.bird_quality.confidence:.2f} P={obs.pipe_quality.confidence:.2f} | {status}', flush=True)
                         last_report = now
                         last_report_tick = tick
                     remaining = 1 / args.fps - (time.perf_counter() - frame_start)

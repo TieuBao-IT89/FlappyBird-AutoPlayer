@@ -248,7 +248,7 @@ class CalibrationWindow:
         return True
 
     def defaults(self):
-        self.session.config = VisionConfig()
+        self.session.config = replace(VisionConfig(), tracking=self.session.config.tracking)
         self.session.samples = {'bird': [], 'pipe': []}
         self._dirty = True
         self.sync_controls()

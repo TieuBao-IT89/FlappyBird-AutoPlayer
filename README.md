@@ -11,6 +11,8 @@ Dự án sử dụng **Python, OpenCV và Playwright**, gồm bot tự chơi và
 - Nhận luồng khung hình từ Chromium và chỉ xử lý ảnh mới nhất bằng OpenCV, tránh tồn đọng ảnh cũ.
 - Nhận diện chim và cặp ống bằng mặt nạ màu HSV; mặc định dùng chim vàng/cam, ống xanh lá.
 - Hiệu chỉnh trực quan bằng chuột: chọn vùng game, lấy mẫu màu, xem mặt nạ và lưu/nạp profile JSON.
+- Đánh giá độ tin cậy, giữ dự đoán ngắn hạn khi mất dấu, xác nhận chim khi tìm lại và chặn khe ống thay đổi bất thường.
+- Bỏ qua ảnh cũ/lặp; tạm ngừng nhảy và học vật lý khi nhận diện chưa đáng tin.
 - Ước lượng trọng lực, lực nhảy và tốc độ ống từ hình ảnh để lập kế hoạch nhấn **Space**.
 - Chặn lệnh nhảy có quỹ đạo dự kiến đâm vào ống trên, kể cả khi chuyển từ khe cao xuống khe thấp.
 - Tự ước lượng độ trễ phím và giữ các thông số đã hiệu chỉnh giữa những ván trong cùng phiên chạy.
@@ -89,13 +91,51 @@ python -m flappy_auto --profile profiles\site.json --debug --runs 3 --seconds 0
 python -m flappy_auto --profile profiles\demo.json --debug --seconds 40
 ```
 
-`--calibrate` chỉ hiệu chỉnh và thoát, không tự chạy bot sau khi lưu. Nếu bỏ `--profile`, đường dẫn lưu gợi ý là `profiles/site.json` hoặc `profiles/demo.json`. Profile gồm phiên bản định dạng, chế độ website/demo, URL website, selector, viewport, ROI, kích thước ảnh tham chiếu theo pixel CSS, gốc tọa độ và ngưỡng màu. Hai gợi ý mỏ/mắt có thể đổi cả dải màu trong JSON. Chưa có cơ chế tìm lại chim hoặc đánh giá độ tin cậy; phần đó thuộc issue #2.
+`--calibrate` chỉ hiệu chỉnh và thoát, không tự chạy bot sau khi lưu. Nếu bỏ `--profile`, đường dẫn lưu gợi ý là `profiles/site.json` hoặc `profiles/demo.json`; profile có sẵn tại đường dẫn đó được nạp lại. Profile gồm phiên bản định dạng, chế độ website/demo, URL website, selector, viewport, ROI, kích thước ảnh tham chiếu theo pixel CSS, gốc tọa độ và ngưỡng màu. Hai gợi ý mỏ/mắt có thể đổi cả dải màu trong JSON. Các ngưỡng theo dõi/phục hồi nằm trong `vision.tracking` như phần bên dưới; cửa sổ hiệu chỉnh giữ nguyên các giá trị này khi lưu.
 
 **Thứ tự ưu tiên:** tham số CLI được truyền rõ ràng → profile → mặc định hiện tại. `--url` chọn website, `--demo` chọn demo (nếu truyền cả hai thì demo được ưu tiên). `--selector`, `--viewport` và `--roi` ghi đè mục tương ứng. Dùng `--full-frame` để bỏ ROI đã lưu. Ngưỡng màu lấy từ profile. Không truyền profile vẫn giữ cách chạy và màu mặc định trước đây.
 
 Khi ảnh game thay đổi kích thước hoặc gốc tọa độ khác profile, bot báo lỗi và yêu cầu hiệu chỉnh lại; thay viewport trên CLI không tắt kiểm tra này. Chạy lại `--calibrate --profile <tệp>` sẽ giữ ngưỡng màu, bỏ ROI cũ nếu bố cục khác để bạn chọn lại. Trong lúc chạy bot, kích thước phần tử được kiểm tra lại khoảng mỗi giây. Tọa độ được chuẩn hóa theo pixel CSS trước khi cắt ROI, kể cả khi Windows dùng DPI lớn hơn 100%. Chromium có thể bố trí phần tử hơi khác khi đổi sang `--headless`; nếu bị báo khác kích thước, chạy cùng chế độ có cửa sổ đã dùng khi hiệu chỉnh.
 
 Thư mục `profiles/` và ảnh chẩn đoán trong `artifacts/` được Git bỏ qua. Khi lưu profile cá nhân, hãy dùng `profiles/`. [Cấu hình mẫu](examples/default-profile.json) giữ màu mặc định và chưa ràng buộc kích thước ảnh (`reference_size: null`, không có ROI); dùng cửa sổ hiệu chỉnh để lưu kích thước thật trước khi dùng lâu dài. Khi mở profile thuộc nguồn khác trong cửa sổ, hãy thoát và mở lại bằng `--calibrate --profile <tệp>` để trình duyệt tải đúng trang.
+
+### Độ tin cậy và phục hồi nhận diện
+
+Trong terminal và cửa sổ gỡ lỗi, `B` là độ tin cậy chim, `P` là độ tin cậy các ống còn ở phía trước hoặc đang chồng lên chim, trong khoảng 0–1. Đây là **điểm bằng chứng theo quy tắc**, không phải xác suất hay tỷ lệ nhận diện đúng đã đo. Chim được chấm theo độ phủ màu (30%), độ gọn hình dạng (25%), kích thước (20%), vị trí ngang (15%) và gợi ý mỏ/mắt (10%). Ống được chấm theo độ phủ màu hai đoạn (45%), cấu trúc khe (30%) và chiều rộng (25%); lấy điểm thấp nhất trong các ống còn liên quan đến va chạm. Bước kiểm tra theo thời gian tiếp tục loại vị trí/kích thước chim bất hợp lý và thay đổi vị trí/chiều rộng/khe của cùng một ống. Chim đứng yên quá lâu, ống đứng lại hoặc đi ngược tốc độ dự kiến cũng bị hạ trạng thái tin cậy, kể cả khi ảnh nền vẫn thay đổi.
+
+| Trạng thái `vision` | Hành vi |
+| --- | --- |
+| `tracking` | Ảnh mới và nhận diện đủ tin cậy; được lập kế hoạch nhảy và học vật lý. Không có ống trước khi ống xuất hiện vẫn là tình huống hợp lệ. |
+| `uncertain` | Mất dấu ngắn hoặc khe/vị trí không nhất quán; có thể vẽ chim dự đoán bằng vòng màu cam hoặc giữ hình dạng ống cũ. Tạm ngừng nhảy và học. |
+| `recovering` | Hết thời gian dự đoán; tiếp tục tìm trong vùng mở rộng dần, chờ ứng viên chim chuyển động nhất quán qua thời gian xác nhận. Tạm ngừng nhảy và học. |
+| `lost` | Hết hạn phục hồi hoặc gặp màn hình kết thúc/hộp thoại đã biết; ngừng điều khiển. Phiên đang chơi có thể kết thúc với lý do mất chim, mất ống hoặc video đứng. |
+
+Ảnh dự đoán không tăng điểm, không kéo dài thời gian thấy chim và không dùng để học trọng lực, lực nhảy, độ trễ phím hay tốc độ ống. Khe ống sai không được đưa vào trung vị để dần biến thành khe mới. Khi một ống đang đến tạm mất dấu, bot vẫn giữ nó là vật cản trong khoảng cho phép. Màn hình GAME OVER hoặc hộp thoại tên được nhận diện từ ảnh mới sẽ chặn điều khiển ngay, độc lập với điểm màu của chim.
+
+Các bộ đếm dùng giây theo đồng hồ thực, không dùng số frame. Timestamp cũ, ảnh đến trễ hoặc ảnh liên tiếp có cùng pixel không được coi là quan sát mới. Dù Chromium cung cấp timestamp tăng, ảnh lặp không thể xác nhận ứng viên, học vật lý hay kéo dài phục hồi vô hạn. Sau khi đã có ống thật hoặc chim đã chuyển động rõ (biên độ vượt 4% chiều cao ảnh), video đứng quá hạn được ghi riêng là `video stalled / stale frames`. Chế độ trước khi bắt đầu không tự kết thúc chỉ vì ảnh tĩnh.
+
+Để chỉnh theo từng game, sửa `vision.tracking` trong profile JSON, rồi chạy với `--profile`. Có thể chỉ khai báo mục cần đổi; profile phiên bản 1 từ trước vẫn nạp được và dùng mặc định cho các mục thiếu. Xem đầy đủ trong [cấu hình mẫu](examples/default-profile.json).
+
+| Mục cấu hình | Mặc định | Ý nghĩa |
+| --- | --- | --- |
+| `min_bird_confidence`, `min_pipe_confidence` | `0.75`, `0.60` | Điểm tối thiểu để chấp nhận bằng chứng hình ảnh. |
+| `prediction_seconds` | `0.12` | Thời gian tối đa vẽ dự đoán chim kể từ ảnh tin cậy cuối. |
+| `pipe_memory_seconds` | `0.30` | Thời gian tối đa giữ hình dạng/vị trí ống thiếu hoặc sai khe. |
+| `reacquire_seconds` | `0.05` | Khoảng xác nhận ứng viên chim bằng các ảnh mới có chuyển động. |
+| `expand_search_seconds` | `0.30` | Thời gian mở rộng cửa sổ tìm kiếm tới giới hạn quanh chim cũ. |
+| `lost_seconds` | `0.80` | Hạn mất dấu/video đứng trong phiên đang chơi. |
+| `max_frame_age` | `0.20` | Tuổi ảnh tối đa để chấp nhận bằng chứng mới. |
+| `bird_x_tolerance` | `0.05` | Sai lệch ngang ban đầu, theo tỷ lệ chiều rộng ảnh; mở rộng tối đa gấp đôi. |
+| `max_bird_speed` | `2.0` | Giới hạn chuyển động dọc, theo chiều cao ảnh mỗi giây. |
+| `max_gap_change` | `0.04` | Sai lệch mép khe so với hình dạng đã xác nhận, theo chiều cao ảnh. |
+| `max_pipe_shift` | `0.06` | Sai lệch ngang so với vị trí ống dự kiến, theo chiều rộng ảnh. |
+| `motion_window_seconds` | `0.30` | Cửa sổ lịch sử ngắn để kiểm tra chuyển động; lịch sử có giới hạn bộ nhớ. |
+| `stationary_bird_seconds` | `0.22` | Khoảng quan sát tối thiểu để loại ứng viên chim chỉ đứng yên/rung nhẹ. |
+| `pipe_motion_seconds` | `0.12` | Khoảng quan sát tối thiểu để kiểm tra tiến độ di chuyển của ống chưa bị cắt ở biên ảnh. |
+
+Các giá trị phải hữu hạn, dương; điểm/tỷ lệ không quá 1. Thời gian dự đoán, giữ ống, mở rộng tìm kiếm và tuổi ảnh phải nằm trong hạn `lost_seconds`; thời gian xác nhận nhỏ hơn hạn này. Nếu liên tục thấy `uncertain` hoặc `recovering`, hãy kiểm tra ROI, màu và mặt nạ trước khi đổi ngưỡng. Ngừng nhảy khi mất nhận diện có thể khiến ván kết thúc; cơ chế phục hồi không bảo đảm sống qua mọi đoạn che khuất.
+
+Khi dùng `--save-debug`, `telemetry.csv` có thêm `vision_state`, `fresh`, `can_control`, `can_learn` và các cột `bird_*`/`pipe_*` cho độ tin cậy, trạng thái, lý do, cờ dự đoán và thời gian mất dấu. Vòng điều khiển tiếp tục chỉ giữ ảnh mới nhất, không tạo hàng đợi ảnh cho phục hồi.
 
 ### Hiệu năng chụp và xử lý ảnh
 
@@ -235,7 +275,7 @@ git push -u origin main
 ```
 
 
-Một số hướng phát triển tiếp: đánh giá độ tin cậy và phục hồi nhận diện, hỗ trợ nhiều giao diện game, đọc điểm từ ảnh bằng OCR, so sánh các bộ điều khiển, xây dựng giao diện quản lý và bổ sung kiểm thử trình duyệt vào CI.
+Một số hướng phát triển tiếp: phát lại và benchmark, hỗ trợ nhiều giao diện game, đọc điểm từ ảnh bằng OCR, so sánh các bộ điều khiển, xây dựng giao diện quản lý và bổ sung kiểm thử trình duyệt vào CI.
 
 ## Sử dụng có trách nhiệm
 

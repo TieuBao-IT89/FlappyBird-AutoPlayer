@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 import json
+import math
 import os
 from pathlib import Path
 import tempfile
@@ -43,6 +44,46 @@ class HSVRange:
 
 
 @dataclass(frozen=True)
+class TrackingConfig:
+    min_bird_confidence: float = .75
+    min_pipe_confidence: float = .60
+    prediction_seconds: float = .12
+    pipe_memory_seconds: float = .30
+    reacquire_seconds: float = .05
+    expand_search_seconds: float = .30
+    lost_seconds: float = .80
+    max_frame_age: float = .20
+    bird_x_tolerance: float = .05
+    max_bird_speed: float = 2.0
+    max_gap_change: float = .04
+    max_pipe_shift: float = .06
+    motion_window_seconds: float = .30
+    stationary_bird_seconds: float = .22
+    pipe_motion_seconds: float = .12
+
+    def __post_init__(self):
+        for key, value in asdict(self).items():
+            if type(value) not in (int, float) or not math.isfinite(value) or value <= 0:
+                raise ValueError(f'tracking.{key} must be a finite positive number')
+        for key in ('min_bird_confidence', 'min_pipe_confidence', 'bird_x_tolerance',
+                    'max_gap_change', 'max_pipe_shift'):
+            if getattr(self, key) > 1:
+                raise ValueError(f'tracking.{key} must be <= 1')
+        if not (self.prediction_seconds <= self.expand_search_seconds <= self.lost_seconds
+                and self.pipe_memory_seconds <= self.lost_seconds
+                and self.reacquire_seconds < self.lost_seconds
+                and self.max_frame_age <= self.lost_seconds
+                and max(self.stationary_bird_seconds, self.pipe_motion_seconds) <= self.motion_window_seconds <= self.lost_seconds):
+            raise ValueError('tracking: prediction/search/memory/frame age must fit within lost_seconds')
+
+    @classmethod
+    def from_dict(cls, data):
+        if not isinstance(data, dict) or set(data) - set(cls.__dataclass_fields__):
+            raise ValueError('tracking: unknown configuration fields')
+        return cls(**data)
+
+
+@dataclass(frozen=True)
 class VisionConfig:
     bird: HSVRange = field(default_factory=lambda: HSVRange((13, 75, 90), (33, 255, 255)))
     pipe: HSVRange = field(default_factory=lambda: HSVRange((38, 65, 45), (92, 255, 255)))
@@ -50,18 +91,23 @@ class VisionConfig:
     eye: HSVRange = field(default_factory=lambda: HSVRange((0, 0, 210), (179, 85, 255)))
     use_beak: bool = True
     use_eye: bool = True
+    tracking: TrackingConfig = field(default_factory=TrackingConfig)
 
     def __post_init__(self):
         if any(not isinstance(getattr(self, key), HSVRange) for key in ('bird', 'pipe', 'beak', 'eye')):
             raise ValueError('Vision colors must be HSV ranges')
         if type(self.use_beak) is not bool or type(self.use_eye) is not bool:
             raise ValueError('use_beak/use_eye must be booleans')
+        if not isinstance(self.tracking, TrackingConfig):
+            raise ValueError('tracking must be a TrackingConfig')
 
     @classmethod
     def from_dict(cls, data):
-        _keys(data, ('bird', 'pipe', 'beak', 'eye', 'use_beak', 'use_eye'), 'vision')
+        required = ('bird', 'pipe', 'beak', 'eye', 'use_beak', 'use_eye')
+        _keys(data, required + (('tracking',) if isinstance(data, dict) and 'tracking' in data else ()), 'vision')
         return cls(**{key: HSVRange.from_dict(data[key]) for key in ('bird', 'pipe', 'beak', 'eye')},
-                   use_beak=data['use_beak'], use_eye=data['use_eye'])
+                   use_beak=data['use_beak'], use_eye=data['use_eye'],
+                   tracking=TrackingConfig.from_dict(data.get('tracking', {})))
 
 
 @dataclass(frozen=True)

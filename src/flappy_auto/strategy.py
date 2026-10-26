@@ -8,7 +8,7 @@ import math
 
 import numpy as np
 
-from .vision import Bird, Observation, Pipe
+from .vision import Bird, Observation, Pipe, image_edge_margin
 
 
 @dataclass
@@ -53,6 +53,8 @@ class Strategy:
         return self.last_flap + max(0, self._action_latency + self._extra_latency)
 
     def _observe(self, obs: Observation, now: float) -> None:
+        if not obs.can_learn:
+            return
         bird = obs.bird
         if not self.gravity:
             self.gravity = obs.height * 1.6
@@ -101,7 +103,7 @@ class Strategy:
                      and abs(pipe.right - self._last_pipe.right) < obs.width * .15)
         if not same_pipe:
             self._pipe_samples.clear()
-        if pipe and pipe.right < obs.width - 3:
+        if pipe and pipe.right < obs.width - image_edge_margin(obs.width):
             self._pipe_samples.append((now, pipe.right))
         if len(self._pipe_samples) >= 4 and now - self._pipe_samples[0][0] >= .12:
             pt = np.array([t - now for t, _ in self._pipe_samples])
@@ -112,6 +114,8 @@ class Strategy:
         self._last_pipe, self._last_pipe_time = pipe, now
 
     def _calibrate(self, obs: Observation, now: float) -> None:
+        if not obs.can_learn:
+            return
         # One estimate per flight arc, rather than correlated estimates every
         # frame. Median filtering rejects wing-animation/quantization outliers.
         if len(self._samples) < 6 or self._samples[-1][0] - self._samples[0][0] < .14:
@@ -242,12 +246,14 @@ class Strategy:
         return min(beam, key=lambda state: state[0])[4]
 
     def should_flap(self, obs: Observation, now: float) -> tuple[bool, str]:
-        if obs.bird is None:
-            self.last_bird = None
-            self.last_seen = None
-            self.filtered_velocity = 0
+        if not obs.can_control:
+            # Keep the last genuine position and cooldown for reacquisition,
+            # but never fit an arc or pipe-speed sample across uncertainty.
             self._samples.clear()
-            return False, 'bird not detected'
+            self._pipe_samples.clear()
+            self._last_pipe = None
+            reason = obs.bird_quality.reason if not obs.bird_quality.trusted or not obs.fresh else obs.pipe_quality.reason
+            return False, f'vision {obs.state}: {reason}'
         if self.last_seen is not None and now <= self.last_seen:
             return False, 'waiting for a fresh frame'
         self._observe(obs, now)

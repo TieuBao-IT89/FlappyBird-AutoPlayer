@@ -146,4 +146,10 @@ def test_pipe_geometry_survives_occlusion_and_resets_for_the_next_pipe():
         assert obs.pipe.gap_top == 70
     following = Pipe(420, 480, 240, 400)
     obs = tracker.stabilize(Observation(bird, following, 480, 720, (following,)), 20 / 60, 180)
+    # A temporarily missing approaching pipe remains an obstacle; its median
+    # must not contaminate the distinct following pipe's opening.
+    assert obs.pipe.gap_top == 70 and obs.pipe_quality.predicted
+    assert any(p.gap_top == 240 for p in obs.pipes)
+    following = Pipe(273, 333, 240, 400)
+    obs = tracker.stabilize(Observation(bird, following, 480, 720, (following,)), 1.15, 180)
     assert obs.pipe.gap_top == 240
