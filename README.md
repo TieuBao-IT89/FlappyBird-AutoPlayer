@@ -21,6 +21,7 @@ Dự án sử dụng **Python, OpenCV và Playwright**, gồm bot tự chơi và
 - Hỗ trợ cửa sổ gỡ lỗi, chụp ảnh, quan sát không điều khiển, bắt đầu thủ công và tùy chỉnh vùng chụp.
 - Có **game demo ngoại tuyến**, bộ kiểm thử bằng Pytest, CI trên GitHub Actions và giấy phép MIT.
 - Có môi trường Gymnasium độc lập và script agent ngẫu nhiên để chuẩn bị thử nghiệm RL.
+- Huấn luyện DQN bằng PyTorch/Stable-Baselines3, lưu/nạp checkpoint và đánh giá trên seed tách riêng.
 
 ## Cài đặt nhanh trên Windows 11 bằng PowerShell
 
@@ -268,7 +269,25 @@ Môi trường `FlappyEnv` mô phỏng game bằng Python, nhận hai hành đ�
 .\.venv\Scripts\python.exe -m pytest tests/test_rl_environment.py -v
 ```
 
-Đã có seed, reward và phân biệt va chạm (`terminated`) với hết giới hạn bước (`truncated`). Chưa có mô hình DQN đã huấn luyện; không cần PyTorch hoặc Stable-Baselines3 trong đợt này. Xem [hướng dẫn Gymnasium](docs/gymnasium.md) để biết API, công cụ kiểm tra môi trường và các giới hạn mô phỏng. Nếu chỉ chạy bot, có thể cài `pip install -e .`; toàn bộ test cần `[dev,rl]`.
+Đã có seed, reward và phân biệt va chạm (`terminated`) với hết giới hạn bước (`truncated`). Smoke chỉ dùng agent ngẫu nhiên; không cần PyTorch hoặc Stable-Baselines3. Xem [hướng dẫn Gymnasium](docs/gymnasium.md) để biết API và các giới hạn mô phỏng. Nếu chỉ chạy bot, có thể cài `pip install -e .`; các test môi trường cần `[dev,rl]`.
+
+### Huấn luyện DQN
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install "torch>=2.3,<3" --index-url https://download.pytorch.org/whl/cpu
+.\.venv\Scripts\python.exe -m pip install -e ".[dev,rl,dqn]"
+.\.venv\Scripts\python.exe scripts\train_dqn.py --config examples\dqn.json
+```
+
+Lệnh tạo thư mục `artifacts/dqn/dqn_*`, huấn luyện 200.000 bước và lưu checkpoint `.zip` kèm `.json`. Dùng `play_dqn.py` để nạp mô hình chơi thử, `evaluate_dqn.py` để so sánh với random/reactive trên seed test chưa dùng huấn luyện hoặc chọn checkpoint:
+
+```powershell
+# Thay dqn_<tên> bằng thư mục thật được in từ lệnh train.
+.\.venv\Scripts\python.exe scripts\play_dqn.py artifacts\dqn\dqn_<tên>\best.zip --seed 2000
+.\.venv\Scripts\python.exe scripts\evaluate_dqn.py artifacts\dqn\dqn_<tên>\best.zip
+```
+
+Training, validation và test có seed riêng; chỉ validation được chọn `best`. Báo cáo CSV/JSON tách điểm cuối ván va chạm khỏi điểm khi hết thời gian. DQN hiện chơi simulator với năm đặc trưng hình học, chưa thay bộ điều khiển website. Xem [hướng dẫn DQN](docs/dqn.md) cho cấu hình, lệnh smoke nhanh, định dạng checkpoint và cách đánh giá. Toàn bộ test, gồm huấn luyện PyTorch thật, cần `[dev,rl,dqn]`; CI cài đủ và chạy cả smoke train.
 
 ## Cấu trúc dự án
 
@@ -296,6 +315,7 @@ FlappyBird-AutoPlayer/
 │   └── game.js          # Game đơn giản tương tự Flappy Bird, tự xây dựng
 ├── tests/               # Bộ kiểm thử bằng Pytest
 ├── scripts/rl_smoke.py  # Chạy một episode với agent ngẫu nhiên
+├── scripts/train_dqn.py / play_dqn.py / evaluate_dqn.py
 ├── docs/architecture.md
 ├── .github/workflows/ci.yml
 ├── examples/default-profile.json
@@ -318,7 +338,7 @@ Luồng khung hình Chromium → ảnh BGR mới nhất → phân tách màu HSV
 
 **Giới hạn hiện tại:** nhận diện dựa vào các màu cụ thể nên có thể nhầm nền hoặc trang phục nhân vật. Bộ điều khiển dùng mô hình vật lý đơn giản có khả năng tự hiệu chỉnh; kết quả thay đổi theo bố trí khe ống, độ trễ ảnh và tải kết xuất. Tự chơi lại dựa vào dòng chữ kết thúc màu đỏ và nút PLAY màu xanh của website; bản demo có thêm cách phát hiện game ngừng chuyển động hoặc mất dấu chim. Website khác có thể cần cách chơi lại riêng.
 
-Số ống là ước lượng từ hình ảnh; dự án chưa đọc điểm bằng OCR, chưa dùng học tăng cường và không truy cập trực tiếp trạng thái nội bộ của game. Xem [tài liệu kiến trúc](docs/architecture.md) để biết cách hiệu chỉnh chi tiết.
+Số ống của bot trình duyệt là ước lượng từ hình ảnh; bot chưa đọc điểm bằng OCR và không truy cập trực tiếp trạng thái nội bộ của game. Pipeline DQN huấn luyện riêng trên simulator Gymnasium, chưa đưa vào vòng điều khiển browser. Xem [tài liệu kiến trúc](docs/architecture.md) để biết cách hiệu chỉnh chi tiết.
 
 ## Đóng góp và đẩy thay đổi lên GitHub
 
