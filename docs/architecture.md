@@ -25,6 +25,20 @@ Chạy `python -m flappy_auto --calibrate --profile profiles/site.json` để ch
 
 Xem trước gọi `vision.detect` với cùng ROI, `VisionConfig` và giới hạn xử lý 320 px như bot. Hai mặt nạ lấy từ cùng hàm `vision_masks` trên ảnh đã thu nhỏ. `VisionTracker` giữ cấu hình qua lần chơi lại; theo dõi thời gian vẫn có thể làm mượt tọa độ ống giữa các khung hình. Browser chuẩn hóa ảnh về kích thước CSS trước khi áp dụng ROI. Khi nạp profile, bot kiểm tra kích thước và gốc tọa độ; tiếp tục kiểm tra lại phần tử khoảng mỗi giây để báo lỗi khi bố cục đổi. Hiệu chỉnh lại sẽ bỏ ROI cũ khi kích thước khác, giữ ngưỡng màu.
 
+## Confidence and recovery
+
+`TrackQuality` attaches a heuristic score, state, reason, prediction flag and recovery age to each observation. The raw detector scores mask support, compactness, size, position and configured eye/beak cues for birds; pipe scores describe color support, gap structure and width. Scores are evidence measures, not calibrated probabilities. `Observation.can_control` and `can_learn` require fresh data and trusted, measured tracking states. Legitimate absence of pipes before their appearance does not block control.
+
+`VisionTracker` retains the last verified bird while analyzing all color candidates. Motion/size gates reject discontinuities before choosing the candidate closest to the bounded prediction. The horizontal search window grows with elapsed time. Recovery after an occlusion or a long input gap requires a coherent moving candidate over `reacquire_seconds`; neither one image nor a static badge can confirm it. Predictions are visualization/search aids only. They expire after `prediction_seconds`, then the tracker searches without emitting a bird; `lost_seconds` bounds the recovery state. The motion estimate used for these search hints is separate from controller physics calibration.
+
+Pipe association compares predicted edges and previously confirmed gap medians. Outlier gaps do not enter the median history or refresh its validity deadline. Bounded motion histories detect static birds and stalled/reversing pipes even when the background changes. Each pipe first establishes its own measured movement reference; the controller's initial scale-based speed is not trusted as ground truth for motion confidence. Clipped edges are excluded from that check and controller speed fitting; both use the same margin for canvas borders and resize rounding. New pipes in an established scene must enter from that right-edge region. Temporarily missing approaching pipes remain obstacles, with untrusted held geometry; expired geometry is omitted while the lost state blocks blind control. Corruptions behind the bird do not block a clear path. The CLI handles known game-over/name-dialog screens before planning, and only a fresh screen can trigger their actions.
+
+`detect(..., processed_at=...)` distinguishes the image timestamp from current wall time. Non-increasing timestamps, timestamps too far in the future, excessive image age and identical consecutive pixel buffers do not update tracking evidence. A CRC stores only a fingerprint of the last accepted image. Repeated frames still advance recovery deadlines using the wall clock. Tracks and geometry histories remain bounded; no frame queue is introduced.
+
+`Strategy` rejects untrusted/predicted/stale observations before planning and independently guards both observation and calibration helpers. Interrupted arcs and speed fits are cleared; learned parameters, the last genuine position and input cooldown remain available for reacquisition. `RunTracker` only counts measured trusted crossings or motion. Its independent wall-clock timeout handles stale video, bird loss and pipe loss; existing explicit game-over detection and frozen-motion detection remain active. Telemetry and overlays expose quality, state, reason, age and prediction status.
+
+Recovery settings live in `VisionConfig.tracking`. Profiles retain version 1; the new object is optional when loading existing profiles and accepts a subset of known settings with defaults. Invalid, non-finite or inconsistent thresholds fail loading. See the Vietnamese README for score weights, defaults and limitations. Calibration preserves these settings without changing them.
+
 ## Tune controller
 
 Modify `Strategy` defaults in `src/flappy_auto/strategy.py`:
@@ -45,7 +59,7 @@ A flap decision retains the velocity at the image timestamp until the expected d
 
 ## Ideas for future milestones
 
-- Vision confidence, lost-bird recovery and broader game profiles.
+- Replay/benchmark datasets and broader game profiles.
 - Broader theme/skin support for visual retry controls.
 - Score OCR and a dashboard comparing completed runs.
 - Self-contained reinforcement learning environment with reproducible physics and reward metrics.

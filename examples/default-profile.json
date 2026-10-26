@@ -13,6 +13,23 @@
     "beak": {"lower": [170, 110, 80], "upper": [12, 255, 255]},
     "eye": {"lower": [0, 0, 210], "upper": [179, 85, 255]},
     "use_beak": true,
-    "use_eye": true
+    "use_eye": true,
+    "tracking": {
+      "min_bird_confidence": 0.75,
+      "min_pipe_confidence": 0.60,
+      "prediction_seconds": 0.12,
+      "pipe_memory_seconds": 0.30,
+      "reacquire_seconds": 0.05,
+      "expand_search_seconds": 0.30,
+      "lost_seconds": 0.80,
+      "max_frame_age": 0.20,
+      "bird_x_tolerance": 0.05,
+      "max_bird_speed": 2.0,
+      "max_gap_change": 0.04,
+      "max_pipe_shift": 0.06,
+      "motion_window_seconds": 0.30,
+      "stationary_bird_seconds": 0.22,
+      "pipe_motion_seconds": 0.12
+    }
   }
 }

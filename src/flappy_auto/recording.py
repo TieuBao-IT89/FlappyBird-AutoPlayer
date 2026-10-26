@@ -25,7 +25,10 @@ class Recorder:
             self.writer = csv.writer(self.file)
             self.writer.writerow(('run', 'time', 'image_age_ms', 'score', 'bird_x', 'bird_y', 'radius',
                                   'pipe_left', 'pipe_right', 'gap_top', 'gap_bottom', 'flap',
-                                  'velocity', 'gravity', 'jump', 'pipe_speed', 'latency_ms', 'extra_latency_ms'))
+                                  'velocity', 'gravity', 'jump', 'pipe_speed', 'latency_ms', 'extra_latency_ms',
+                                  'vision_state', 'fresh', 'can_control', 'can_learn',
+                                  'bird_confidence', 'bird_state', 'bird_reason', 'bird_predicted', 'bird_recovery_age',
+                                  'pipe_confidence', 'pipe_state', 'pipe_reason', 'pipe_predicted', 'pipe_recovery_age'))
             self.worker = LatestWorker(self._write_image)
 
     def record(self, run, elapsed, age, score, frame, obs, flap, strategy):
@@ -37,7 +40,12 @@ class Recorder:
                               *([pipe.left, pipe.right, pipe.gap_top, pipe.gap_bottom] if pipe else ('', '', '', '')),
                               flap, round(strategy.filtered_velocity, 2), round(strategy.gravity, 2),
                               round(strategy.jump_speed, 2), round(strategy.pipe_speed, 2),
-                              round(strategy.latency_seconds * 1000, 1), round(strategy._extra_latency * 1000, 1)))
+                              round(strategy.latency_seconds * 1000, 1), round(strategy._extra_latency * 1000, 1),
+                              obs.state, obs.fresh, obs.can_control, obs.can_learn,
+                              round(obs.bird_quality.confidence, 3), obs.bird_quality.state, obs.bird_quality.reason,
+                              obs.bird_quality.predicted, round(obs.bird_quality.age, 4),
+                              round(obs.pipe_quality.confidence, 3), obs.pipe_quality.state, obs.pipe_quality.reason,
+                              obs.pipe_quality.predicted, round(obs.pipe_quality.age, 4)))
         if elapsed - self.last_image >= .1:
             self.worker.submit(('frame', elapsed, frame))
             self.last_image = elapsed

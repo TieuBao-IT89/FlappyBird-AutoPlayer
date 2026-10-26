@@ -46,6 +46,7 @@ def game_over_banner(frame: np.ndarray) -> bool:
 @dataclass
 class RunTracker:
     score: int = 0
+    vision_timeout: float = .8
     _target: Pipe | None = None
     _target_seen: float = 0
     _target_counted: bool = False
@@ -55,43 +56,62 @@ class RunTracker:
     _last_bird_y: float | None = None
     _started: float | None = None
     _had_pipes: bool = False
+    _last_fresh: float | None = None
+    _wall_time: float = float('-inf')
+    _bird_range: tuple[float, float] | None = None
+    _active_motion: bool = False
 
     @property
     def has_played(self) -> bool:
         return self._had_pipes
 
-    def update(self, obs: Observation, now: float) -> str | None:
+    @property
+    def active(self) -> bool:
+        return self._had_pipes or self._active_motion
+
+    def update(self, obs: Observation, now: float, *, wall_time: float | None = None) -> str | None:
         """Return a stop reason on missing/frozen gameplay, else None."""
-        if self._last_time is not None and now <= self._last_time:
-            return None
+        clock = max(self._wall_time, now if wall_time is None else wall_time)
+        self._wall_time = clock
+        fresh = obs.fresh and (self._last_time is None or now > self._last_time)
         if self._started is None:
-            self._started = self._last_motion = self._last_bird_seen = now
-        self._last_time = now
-        if obs.bird:
-            self._last_bird_seen = now
-            if self._last_bird_y is not None and abs(obs.bird.y - self._last_bird_y) > .5:
-                self._last_motion = now
-            self._last_bird_y = obs.bird.y
-        pipes = obs.pipes or ((obs.pipe,) if obs.pipe else ())
+            self._started = self._last_motion = self._last_bird_seen = self._last_fresh = clock
+        if fresh:
+            self._last_time = now
+            self._last_fresh = clock
+        bird = obs.bird if fresh and obs.bird_quality.trusted else None
+        if bird:
+            self._last_bird_seen = clock
+            low, high = self._bird_range or (bird.y, bird.y)
+            self._bird_range = min(low, bird.y), max(high, bird.y)
+            self._active_motion |= self._bird_range[1]-self._bird_range[0] > max(8, obs.height*.04)
+            if self._last_bird_y is not None and abs(bird.y - self._last_bird_y) > .5:
+                self._last_motion = clock
+            self._last_bird_y = bird.y
+        pipes = (obs.pipes or ((obs.pipe,) if obs.pipe else ())) if fresh and obs.pipe_quality.trusted else ()
         self._had_pipes |= bool(pipes)
-        pipe = obs.pipe
+        pipe = obs.pipe if fresh and obs.pipe_quality.trusted else None
         if pipe is not None:
             switched = self._target is not None and pipe.right - self._target.right > obs.width * .25
             if switched:
                 # A switch to the next pipe can confirm a crossing that fell
                 # between images, even when the old gap briefly disappeared.
-                if (not self._target_counted and obs.bird and now - self._target_seen < .7
-                        and self._target.right < obs.bird.x + obs.width * .15):
+                if (not self._target_counted and bird and clock - self._target_seen < .7
+                        and self._target.right < bird.x + obs.width * .15):
                     self.score += 1
                 self._target_counted = False
             if self._target is not None and abs(pipe.right - self._target.right) > .5:
-                self._last_motion = now
-            if obs.bird and not self._target_counted and (pipe.left + pipe.right) / 2 < obs.bird.x:
+                self._last_motion = clock
+            if bird and not self._target_counted and (pipe.left + pipe.right) / 2 < bird.x:
                 self.score += 1
                 self._target_counted = True
-            self._target, self._target_seen = pipe, now
-        if self._had_pipes and now - self._last_bird_seen > .7:
+            self._target, self._target_seen = pipe, clock
+        if self.active and clock-self._last_fresh >= self.vision_timeout:
+            return 'video stalled / stale frames'
+        if self.active and clock - self._last_bird_seen >= self.vision_timeout:
             return 'bird lost'
-        if self._had_pipes and now - self._last_motion > 1.2:
+        if self.active and obs.pipe_quality.state == 'lost':
+            return 'pipe tracking lost'
+        if self.active and clock - self._last_motion > max(1.2, self.vision_timeout):
             return 'game stopped moving'
         return None
