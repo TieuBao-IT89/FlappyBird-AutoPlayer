@@ -1,0 +1,38 @@
+{
+  "final_code": {
+    "git_revision": "dbb555d954366ba9e500a8e54bf37fd444566e11",
+    "git_dirty": true,
+    "source_sha256": "65ba7fa26156705e8b1c45c2a82c7af1be07bcbaaae02b8daabcf103ea83798b",
+    "package_version": "0.1.0",
+    "python": "3.11.9",
+    "platform": "Windows-10-10.0.26200-SP0",
+    "numpy": "2.4.6",
+    "opencv": "4.14.0"
+  },
+  "final_browser_policy_sha256": "7d5b1b4b60dc6be9b30c0b769c8a394d94ec437ee82a39010cf7a7e23718b3b7",
+  "note": "Trials ran on dirty main base; final change adds provenance fields, not action behavior.",
+  "files_sha256": {
+    "src/flappy_auto/__init__.py": "3ea4bb19f30028d7f8149472d7d198809c5c2136e462618bb12eb67ae92234ab",
+    "src/flappy_auto/__main__.py": "6259b4b577cb902a92d06fce256bab6c932e63b9db2b01001f3ea46c35353c43",
+    "src/flappy_auto/benchmark.py": "c613da641339b1d9324f926bac4fc103b68eef5471e80e141d0a81aa70632f4e",
+    "src/flappy_auto/browser.py": "498eb62348b05e894354fa397d5c18062a8696f1499bd6fde9f8783d9495572a",
+    "src/flappy_auto/calibration.py": "29b4e5764de07664fb502e91277cfcaac8e7ae72dcb775cb1a84e0baaf09f85d",
+    "src/flappy_auto/demo_server.py": "a64640246d79f2360cde3095f4ee5da3d405243b11b99b5959e37cba3d6ba100",
+    "src/flappy_auto/profiles.py": "a1550dbf816f4935652080985adb10870089078e5c2ea5aab29352df634576b1",
+    "src/flappy_auto/provenance.py": "d5a2fc91d36447ca69c3fec84db00c75ba7f27b2e509ad4e50c67d6b5cdf7941",
+    "src/flappy_auto/recording.py": "e03da383aa4b8aa659f6d6c8a7d47935afa5174c1106e7050370303e85e61152",
+    "src/flappy_auto/replay.py": "e2b49fe6834645120bab1afd695adf72f2513fc3788db9e626b4eef48a045f50",
+    "src/flappy_auto/rl/__init__.py": "daad36c41c0ec14f3d6595e4cca87c32640fb7daa4757c9c8ac70920d3cce1ca",
+    "src/flappy_auto/rl/browser_adapter.py": "2a980620db2ec2081546fa2b2ee0b22c189e0ff0b5cc461c3faef675d28b7bee",
+    "src/flappy_auto/rl/browser_policy.py": "8ba973c68f484eb4e9c531036b20021ac14bcee1ebc91e49f75aaaa54ac1997a",
+    "src/flappy_auto/rl/dqn.py": "f8996450544e0ad9e318285d6fb1abd01bdd18e87a3f15a03babe6f980ac493d",
+    "src/flappy_auto/rl/environment.py": "73b03162cce868dbf5f0c898ac179cb298d7fbbb513e30adf80c8f3994193948",
+    "src/flappy_auto/rl/evaluation.py": "f2bb54ee23cbecc890b73b6638179e785a40b0cf34b020af972ed4238a9cb9c6",
+    "src/flappy_auto/session.py": "c21a7242c45907f80031d9125a96bd7a2dbc4d828ffa0976f7517b626d204e9a",
+    "src/flappy_auto/session_format.py": "f7ed7d4b034218297c6c2528f603df920064079547aceb0ca0285c6a5f35c109",
+    "src/flappy_auto/simulation.py": "127da5c2c12e12f1c19751e205a20fbbbf9864fa5730d73b4c68a96da358e443",
+    "src/flappy_auto/strategy.py": "959e9578b69b7d3c30fcf40b729c23c1d7e26d70ad5dc84f5b9b4d928d68398f",
+    "src/flappy_auto/vision.py": "9a58e5aff2af2ea5b2ce344867fb6d89af8acf3b352475c1a064a499f492d89d",
+    "src/flappy_auto/workers.py": "e2bfc8cf4348d0b4d8c03178f419def9f0d2a4c3854a0f811fc5eff2adf5cf3f"
+  }
+}

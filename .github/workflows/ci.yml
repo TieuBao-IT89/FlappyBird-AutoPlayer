@@ -23,3 +23,9 @@ jobs:
         run: python scripts/rl_smoke.py
       - name: Smoke test DQN training
         run: python scripts/train_dqn.py --timesteps 128 --learning-starts 16 --eval-freq 64 --output artifacts/dqn-smoke
+      - name: Install Chromium for browser policy smoke test
+        run: python -m playwright install --with-deps chromium
+      - name: Smoke test DQN browser integration
+        env:
+          FLAPPY_BROWSER_SMOKE: '1'
+        run: python -m pytest -q tests/test_dqn_browser_smoke.py

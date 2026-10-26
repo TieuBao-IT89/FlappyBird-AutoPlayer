@@ -1,6 +1,6 @@
 # Huấn luyện DQN với Stable-Baselines3
 
-Đợt này thêm pipeline huấn luyện mạng PyTorch trên `FlappyEnv`, lưu/nạp checkpoint `.zip`, chơi thử một episode và đánh giá trên seed tách riêng. Môi trường trả năm đặc trưng hình học; bot website vẫn dùng OpenCV và `Strategy`. DQN hiện chơi simulator Python, chưa điều khiển website từ ảnh.
+Pipeline huấn luyện mạng PyTorch trên `FlappyEnv`, lưu/nạp checkpoint `.zip`, chơi thử một episode và đánh giá trên seed tách riêng. Sau khi train, checkpoint còn có thể điều khiển browser qua adapter ảnh OpenCV: xem [DQN browser](dqn-browser.md). Rule vẫn là mặc định.
 
 Đã có [kết quả mẫu 200.000 bước](benchmarks/dqn-200k/README.md), gồm toàn bộ validation/test, so sánh baseline và thông tin tái lập.
 
@@ -98,6 +98,6 @@ Phân biệt `completed` (va chạm thật) với `time_limit` (còn sống khi 
 
 ## Giới hạn và tài liệu gốc
 
-Reward và va chạm giữ nguyên `FlappyEnv` của mốc trước. Điểm được ghi khi mép phải ống qua tâm chim, sớm hơn lúc toàn thân thoát ống; cùng một bước có thể vừa ghi điểm vừa va chạm. Mô hình hiện nhận vị trí/vận tốc trực tiếp, chưa qua pipeline ảnh có nhiễu hoặc độ trễ thật. Đạt điểm cao trong simulator không chứng minh điều khiển website tốt hơn. Bước sau cần thêm đánh giá nhiều seed huấn luyện và cầu nối quan sát/độ trễ trước khi đưa AI sang bot browser.
+Reward và va chạm giữ nguyên `FlappyEnv` của mốc trước. Điểm được ghi khi mép phải ống qua tâm chim, sớm hơn lúc toàn thân thoát ống; cùng một bước có thể vừa ghi điểm vừa va chạm. Trong huấn luyện, mô hình nhận vị trí/vận tốc trực tiếp, chưa qua pipeline ảnh có nhiễu hoặc độ trễ thật. Đạt điểm cao trong simulator không chứng minh điều khiển website tốt hơn. Adapter browser đã có; cần tiếp tục đánh giá nhiều seed huấn luyện và sai lệch quan sát/độ trễ.
 
 Tham khảo tài liệu chính thức: [DQN và lưu/nạp mô hình của SB3](https://stable-baselines3.readthedocs.io/en/master/modules/dqn.html), [callbacks](https://stable-baselines3.readthedocs.io/en/master/guide/callbacks.html), [cài đặt PyTorch](https://pytorch.org/get-started/locally/).

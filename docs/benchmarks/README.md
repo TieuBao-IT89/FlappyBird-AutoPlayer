@@ -1,5 +1,7 @@
 # Kết quả mẫu issue #3
 
+Các đợt khác: [DQN simulator 200k](dqn-200k/README.md), [DQN browser và rule](dqn-browser/README.md).
+
 Đợt kiểm tra ngày 26/10/2026: 24 lượt mô phỏng, 3 seed × 2 ván × 2 bộ điều khiển × 2 chế độ. Công bố **toàn bộ 24 lượt** trong [issue3-trials.csv](issue3-trials.csv), gồm cả ván va chạm và hết giờ; không có lỗi hoặc lượt chưa chạy trong đợt này. Kiểm thử tự động riêng bao phủ lỗi I/O, worker lỗi/quá hạn/gián đoạn và dữ liệu thiếu.
 
 Chạy lại từ thư mục gốc bằng cấu hình đúng của đợt này:

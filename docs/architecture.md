@@ -62,12 +62,19 @@ A flap decision retains the velocity at the image timestamp until the expected d
 
 `rl.FlappyEnv` cung cấp mô phỏng Python độc lập để chuẩn bị huấn luyện RL: hai hành động, năm đặc trưng hình học, RNG theo seed, reward và giới hạn bước. Module chỉ nạp Gymnasium khi import `flappy_auto.rl`; bot và simulator benchmark tiếp tục dùng đường đi hiện tại. Vật lý dựa trên hằng số demo ở bước cố định 1/60 giây; không đồng nhất với mô hình benchmark có nhiễu/độ trễ hoặc browser thật. `scripts/rl_smoke.py` chạy agent ngẫu nhiên; CI chạy cả smoke và kiểm tra API Gymnasium. Xem [hướng dẫn Gymnasium](gymnasium.md) để biết đặc trưng, reward và khác biệt với demo.
 
-`rl.dqn` thêm DQN CPU qua extra tùy chọn: `SeedSchedule` giới hạn episode trong tập training, callback chỉ dùng validation để chọn checkpoint, còn `rl.evaluation` so sánh mô hình đã cố định với random/reactive trên seed test. Mỗi ZIP có metadata/hash để kiểm tra khi load. Các script train/play/evaluate không đi qua vòng điều khiển browser. Xem [hướng dẫn DQN](dqn.md) cho cấu hình và giới hạn tái lập.
+`rl.dqn` thêm DQN CPU qua extra tùy chọn: `SeedSchedule` giới hạn episode trong tập training, callback chỉ dùng validation để chọn checkpoint, còn `rl.evaluation` so sánh mô hình đã cố định với random/reactive trên seed test. Mỗi ZIP có metadata/hash để kiểm tra khi load. Các script train/play/evaluate DQN chạy simulator; CLI browser có đường suy luận riêng bên dưới. Xem [hướng dẫn DQN](dqn.md) cho cấu hình và giới hạn tái lập.
+
+## Browser DQN
+
+`--policy rule` giữ nguyên planner mặc định và không import extra RL. `--policy dqn --model PATH` dùng bộ nạp checkpoint đã kiểm tra trước khi mở browser. Ảnh Playwright → `VisionTracker` → `BrowserObservationAdapter` → năm đặc trưng `float32` → `DQNController` → coast/Space. Không đọc trạng thái game JavaScript.
+
+Adapter đo vận tốc bằng timestamp ảnh, quy về hệ cao 600 px rồi chia 400; các đặc trưng vị trí chia cho kích thước sân chơi. Ống đầu tiên còn chạm bán kính chim được giữ làm mục tiêu. Dữ liệu thiếu, confidence thấp, ảnh cũ, timestamp trùng/lùi và thay đổi hình học đều cần khôi phục vận tốc trước khi suy luận. DQN được gọi tối đa 60 Hz, không replay action khi FPS thấp; kiểm tra lại tuổi ảnh sau inference và trước dispatch. Episode mới và phục hồi hộp thoại tên xóa lịch sử.
+
+`DQNController` dùng giao diện telemetry của `Strategy` và chỉ tái sử dụng đo chuyển động ảnh cho ghép ống/chẩn đoán; không gọi planner rule hay áp cooldown của rule. JSONL ghi observation DQN, action dự đoán, thời gian inference, lý do chặn và phím thực sự gửi. `BrowserMetrics` giữ bộ đếm kích thước cố định cho mỗi ván. `scripts/evaluate_browser.py` so sánh browser mới/cùng cấu hình, giữ cả ván không hoàn tất và lỗi. Xem [DQN browser](dqn-browser.md).
 
 ## Ideas for future milestones
 
 - Broader replay/benchmark datasets and game profiles.
 - Broader theme/skin support for visual retry controls.
 - Score OCR and a dashboard comparing completed runs.
-- Evaluate RL agents across multiple training seeds and bridge simulator observations to browser vision.
-- Smoke test via headless Chromium against the bundled demo.
+- Evaluate RL agents across multiple training seeds and reduce the measured simulation-to-browser gap.

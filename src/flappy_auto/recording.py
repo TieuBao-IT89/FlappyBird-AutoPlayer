@@ -165,6 +165,9 @@ class Recorder:
                  'blocked_reason': obs.bird_quality.reason.removeprefix('blocked: ') if obs.bird_quality.reason.startswith('blocked: ') else None,
                  'action_sent': bool(flap), 'action_sent_at': action_sent_at, 'decision_ms': decision_ms,
                  'score_so_far': score, 'observation': observation_dict(obs), 'image': image}
+        decision = getattr(strategy, 'policy_decision', None)
+        if decision is not None:
+            event['policy_decision'] = decision.copy()
         row = (run, round(elapsed, 4), round(age*1000, 1), score,
                *([bird.x, bird.y, bird.radius] if bird else ('', '', '')),
                *([pipe.left, pipe.right, pipe.gap_top, pipe.gap_bottom] if pipe else ('', '', '', '')),
