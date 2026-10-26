@@ -7,6 +7,8 @@ from collections import deque
 import cv2
 import numpy as np
 
+from .profiles import HSVRange, VisionConfig
+
 
 @dataclass(frozen=True)
 class Bird:
@@ -37,9 +39,26 @@ class Observation:
 
 
 def _color_mask(hsv: np.ndarray, lower: tuple[int, int, int], upper: tuple[int, int, int]) -> np.ndarray:
-    mask = cv2.inRange(hsv, np.array(lower, dtype=np.uint8), np.array(upper, dtype=np.uint8))
+    mask = hsv_mask(hsv, HSVRange(lower, upper))
     kernel = np.ones((3, 3), np.uint8)
     return cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
+
+
+def hsv_mask(hsv: np.ndarray, color: HSVRange) -> np.ndarray:
+    """Hue is circular in OpenCV; S and V remain ordinary intervals."""
+    lower, upper = color.lower, color.upper
+    if lower[0] <= upper[0]:
+        return cv2.inRange(hsv, lower, upper)
+    return (cv2.inRange(hsv, (0, *lower[1:]), upper)
+            | cv2.inRange(hsv, lower, (179, *upper[1:])))
+
+
+def vision_masks(frame: np.ndarray, config: VisionConfig):
+    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    return (_color_mask(hsv, config.bird.lower, config.bird.upper),
+            _color_mask(hsv, config.pipe.lower, config.pipe.upper),
+            hsv_mask(hsv, config.beak) if config.use_beak else None,
+            hsv_mask(hsv, config.eye) if config.use_eye else None)
 
 
 def _bird_from_mask(mask: np.ndarray, previous: Bird | None = None,
@@ -142,7 +161,8 @@ def _next_pipe(pipes, bird, width):
     return min(ahead, key=lambda p: p.left) if ahead else None
 
 
-def detect(frame_bgr: np.ndarray, previous_bird: Bird | None = None, max_width: int = 320) -> Observation:
+def detect(frame_bgr: np.ndarray, previous_bird: Bird | None = None, max_width: int = 320,
+           config: VisionConfig | None = None) -> Observation:
     if frame_bgr is None or frame_bgr.ndim != 3 or frame_bgr.shape[2] != 3:
         raise ValueError("Expected a BGR image with 3 channels")
     original_h, original_w = frame_bgr.shape[:2]
@@ -152,12 +172,7 @@ def detect(frame_bgr: np.ndarray, previous_bird: Bird | None = None, max_width: 
         if previous_bird:
             previous_bird = Bird(previous_bird.x * scale, previous_bird.y * scale, previous_bird.radius * scale)
     h, w = frame_bgr.shape[:2]
-    hsv = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2HSV)
-    # Defaults intended for yellow/orange bird + green pipes. Adjustable here for skins.
-    bird_mask = _color_mask(hsv, (13, 75, 90), (33, 255, 255))
-    pipe_mask = _color_mask(hsv, (38, 65, 45), (92, 255, 255))
-    beak_mask = cv2.inRange(hsv, (0, 110, 80), (12, 255, 255)) | cv2.inRange(hsv, (170, 110, 80), (179, 255, 255))
-    eye_mask = cv2.inRange(hsv, (0, 0, 210), (179, 85, 255))
+    bird_mask, pipe_mask, beak_mask, eye_mask = vision_masks(frame_bgr, config or VisionConfig())
     bird = _bird_from_mask(bird_mask, previous_bird, beak_mask, eye_mask)
     pipes = _pipes_from_mask(pipe_mask)
     if scale < 1:
@@ -172,12 +187,13 @@ def detect(frame_bgr: np.ndarray, previous_bird: Bird | None = None, max_width: 
 class VisionTracker:
     """Keep each visible pipe's geometry through temporary score occlusion."""
 
-    def __init__(self):
+    def __init__(self, config: VisionConfig | None = None):
+        self.config = config or VisionConfig()
         self.previous_bird = None
         self._tracks = []
 
     def detect(self, frame: np.ndarray, now: float, speed: float = 0) -> Observation:
-        obs = detect(frame, self.previous_bird)
+        obs = detect(frame, self.previous_bird, config=self.config)
         self.previous_bird = obs.bird
         return self.stabilize(obs, now, speed or obs.width * .35)
 

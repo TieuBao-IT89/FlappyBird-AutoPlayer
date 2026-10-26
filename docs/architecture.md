@@ -13,16 +13,17 @@
 
 Screenshot origin is upper-left: increasing Y means descending on screen. Output images are normalized to CSS pixels so Windows display scaling does not inflate the frame size. `Pipe.gap_top` and `gap_bottom` are relative to the captured canvas or ROI. No browser JavaScript game internals are accessed. If the whole page is captured instead of the canvas, all colors and coordinates may be wrong.
 
-## Tune HSV colors
+## Hiệu chỉnh nhận diện và profile
 
-Edit the two masks in `src/flappy_auto/vision.py`:
+Chạy `python -m flappy_auto --calibrate --profile profiles/site.json` để chọn ROI bằng chuột, lấy nhiều mẫu màu chim/ống, chỉnh H/S/V và xem ba ảnh đồng thời. Thêm `--demo` để hiệu chỉnh bản ngoại tuyến. Chạy bot bằng `--profile <tệp>` sau khi lưu. Quy trình đầy đủ nằm trong README tiếng Việt.
 
-```python
-bird_mask = _color_mask(hsv, (13, 75, 90), (33, 255, 255))
-pipe_mask = _color_mask(hsv, (38, 65, 45), (92, 255, 255))
-```
+`profiles.GameProfile` kiểm tra định dạng JSON phiên bản 1, URL, selector, viewport, gốc tọa độ, kích thước ảnh tham chiếu, ROI và `VisionConfig`. CLI ghi đè giá trị tương ứng trong profile; mặc định cũ được giữ khi không có profile. `--full-frame` xóa ROI đã lưu. Profile demo lưu chế độ demo thay vì URL máy chủ tạm thời. Tệp mẫu trong `examples/` không có ROI và kích thước tham chiếu; profile lưu từ giao diện luôn có kích thước thật. Việc lưu dùng tệp tạm và thay thế nguyên tử để không ghi dở profile đang dùng.
 
-HSV here follows OpenCV's convention: H from 0–179, S/V from 0–255. Different browser games, night themes, skins and anti-aliasing require different thresholds. Run `--capture-only artifacts/screenshot.png` to inspect actual pixels. In the debug window, the red circle indicates detected bird, the magenta rectangle indicates target gap. If detection misses, inspect the image and tune thresholds. For non-canvas pages use `--roi X Y W H` after measuring screenshot pixel coordinates.
+`calibration.CalibrationSession` giữ ảnh gốc, ROI, mẫu và ngưỡng; không phụ thuộc Tk. `DisplayTransform` ánh xạ chuột qua tỷ lệ ảnh và khoảng đệm trong cửa sổ về pixel CSS. Mỗi lần nhấp lấy mẫu vùng 5 × 5, dùng trung vị S/V và medoid Hue theo khoảng cách vòng tròn. Nhiều mẫu xác định cung Hue nhỏ nhất rồi mở rộng biên; dải có H thấp > H cao đi qua 179 → 0. Các ô ngưỡng cho phép chỉnh trực tiếp; gợi ý mỏ/mắt có thể tắt trong giao diện hoặc đổi màu trong JSON.
+
+`CalibrationWindow` dùng Tkinter có sẵn trong Python, tạo ảnh PNG bằng OpenCV và `PhotoImage`, không cần Pillow. Tk và Playwright đồng bộ cùng luồng sở hữu; chỉ chụp ảnh theo thao tác hoặc bộ hẹn giờ 150 ms khi bật ảnh trực tiếp. Nhấn vào ảnh sẽ đóng băng trước khi chọn vùng/lấy mẫu. Hiệu chỉnh kết thúc trước vòng điều khiển, không chạy cùng cửa sổ OpenCV hoặc worker gỡ lỗi. Bộ xử lý lỗi callback hiển thị lý do trên giao diện.
+
+Xem trước gọi `vision.detect` với cùng ROI, `VisionConfig` và giới hạn xử lý 320 px như bot. Hai mặt nạ lấy từ cùng hàm `vision_masks` trên ảnh đã thu nhỏ. `VisionTracker` giữ cấu hình qua lần chơi lại; theo dõi thời gian vẫn có thể làm mượt tọa độ ống giữa các khung hình. Browser chuẩn hóa ảnh về kích thước CSS trước khi áp dụng ROI. Khi nạp profile, bot kiểm tra kích thước và gốc tọa độ; tiếp tục kiểm tra lại phần tử khoảng mỗi giây để báo lỗi khi bố cục đổi. Hiệu chỉnh lại sẽ bỏ ROI cũ khi kích thước khác, giữ ngưỡng màu.
 
 ## Tune controller
 
@@ -44,7 +45,7 @@ A flap decision retains the velocity at the image timestamp until the expected d
 
 ## Ideas for future milestones
 
-- Interactive color calibration and region selection.
+- Vision confidence, lost-bird recovery and broader game profiles.
 - Broader theme/skin support for visual retry controls.
 - Score OCR and a dashboard comparing completed runs.
 - Self-contained reinforcement learning environment with reproducible physics and reward metrics.

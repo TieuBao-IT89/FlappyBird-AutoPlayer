@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from flappy_auto.browser import GameBrowser
+from flappy_auto.profiles import GameProfile
 
 
 def test_compositor_timestamps_preserve_motion_when_delivery_is_jittery(monkeypatch):
@@ -60,3 +61,43 @@ def test_restart_closes_name_dialog_before_clicking_play(monkeypatch):
     assert len(clicks) == 2
     assert abs(clicks[0][0] - 390) < 3 and abs(clicks[0][1] - 266) < 3
     assert abs(clicks[1][0] - 330) < 2 and abs(clicks[1][1] - 495) < 2
+
+
+@pytest.mark.parametrize('scale', [1, 1.25, 1.5, 2])
+def test_capture_normalizes_high_dpi_before_applying_roi(scale):
+    import base64
+    viewport = {'width': 480, 'height': 720}
+    image = np.zeros((round(720*scale), round(480*scale), 3), np.uint8)
+    image[round(100*scale):round(300*scale), round(60*scale):round(160*scale)] = (20, 200, 50)
+    _, encoded = cv2.imencode('.png', image)
+    browser = GameBrowser(SimpleNamespace(viewport_size=viewport))
+    browser._bounds = {'x': 20, 'y': 40, 'width': 360, 'height': 600}
+    browser._streaming = True
+    browser._sequence = 1
+    browser._latest = base64.b64encode(encoded).decode()
+    crop = browser.capture((40, 60, 100, 200))
+    assert crop.shape == (200, 100, 3)
+    assert np.allclose(crop[5:-5, 5:-5], (20, 200, 50))
+
+
+def test_profile_detects_changed_element_bounds_and_disappearing_element():
+    bounds = {'x': 0, 'y': 0, 'width': 360, 'height': 600}
+    browser = GameBrowser(SimpleNamespace(viewport_size={'width': 480, 'height': 720}))
+    browser.game_area = SimpleNamespace(bounding_box=lambda: bounds)
+    browser.calibration_profile = GameProfile(reference_size=(360, 600))
+    assert browser._rectangle(None) == (0, 0, 360, 600)
+    bounds['width'] = 400
+    browser._geometry_checked = 0
+    with pytest.raises(ValueError, match='calibrate'):
+        browser._rectangle(None)
+    browser.game_area = SimpleNamespace(bounding_box=lambda: None)
+    with pytest.raises(ValueError, match='no longer visible'):
+        browser.geometry()
+
+
+def test_roi_selected_on_rounded_css_image_accepts_fractional_element_bounds():
+    browser = GameBrowser(SimpleNamespace(viewport_size={'width': 480, 'height': 720}))
+    browser._bounds = {'x': 10.25, 'y': 20.25, 'width': 356.75, 'height': 586.75}
+    assert browser._rectangle((0, 0, 357, 587)) == (10.25, 20.25, 357, 587)
+    with pytest.raises(ValueError, match='outside'):
+        browser._rectangle((0, 0, 358, 587))

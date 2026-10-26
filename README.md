@@ -9,7 +9,8 @@ Dự án sử dụng **Python, OpenCV và Playwright**, gồm bot tự chơi và
 - Mở trình duyệt Chromium bằng Playwright.
 - Tự chọn phần tử `<canvas>` hiển thị lớn nhất, kể cả trong iframe.
 - Nhận luồng khung hình từ Chromium và chỉ xử lý ảnh mới nhất bằng OpenCV, tránh tồn đọng ảnh cũ.
-- Nhận diện **chim màu vàng/cam** và **cặp ống màu xanh lá** bằng mặt nạ màu HSV.
+- Nhận diện chim và cặp ống bằng mặt nạ màu HSV; mặc định dùng chim vàng/cam, ống xanh lá.
+- Hiệu chỉnh trực quan bằng chuột: chọn vùng game, lấy mẫu màu, xem mặt nạ và lưu/nạp profile JSON.
 - Ước lượng trọng lực, lực nhảy và tốc độ ống từ hình ảnh để lập kế hoạch nhấn **Space**.
 - Chặn lệnh nhảy có quỹ đạo dự kiến đâm vào ống trên, kể cả khi chuyển từ khe cao xuống khe thấp.
 - Tự ước lượng độ trễ phím và giữ các thông số đã hiệu chỉnh giữa những ván trong cùng phiên chạy.
@@ -47,7 +48,7 @@ python -m flappy_auto --seconds 180 --runs 5 --debug --save-debug artifacts\late
 
 Sau khi cài đặt, bạn cũng có thể nhấp đúp vào `run_demo.cmd` hoặc `run_site.cmd` trong File Explorer.
 
-`run_site.cmd` chạy **ba ván hoàn chỉnh**, có cửa sổ trình duyệt và cửa sổ gỡ lỗi. Nhấn **Q** trong cửa sổ gỡ lỗi hoặc **Ctrl+C** trong terminal để dừng sớm. Bot giữ các thông số vật lý đã học giữa các lần chơi lại. `--seconds` giới hạn thời gian của **toàn bộ phiên chạy**; tệp khởi chạy dùng `--seconds 0` để một ván dài không làm hết thời gian dành cho những ván sau.
+`run_site.cmd` chạy **ba ván hoàn chỉnh**, có cửa sổ trình duyệt và cửa sổ gỡ lỗi. Tệp này tự nạp `profiles/site.json` nếu có; `run_demo.cmd` tự nạp `profiles/demo.json`. Chưa lưu profile thì hai tệp vẫn dùng mặc định. Nhấn **Q** trong cửa sổ gỡ lỗi hoặc **Ctrl+C** trong terminal để dừng sớm. Bot giữ các thông số vật lý đã học giữa các lần chơi lại. `--seconds` giới hạn thời gian của **toàn bộ phiên chạy**; tệp khởi chạy dùng `--seconds 0` để một ván dài không làm hết thời gian dành cho những ván sau.
 
 Khi bật `--save-debug`, mỗi lần mở bot sẽ tạo một thư mục `session_*` riêng trong đường dẫn đã chọn, giúp giữ lại log của những lần thử trước. Đường dẫn này được in trong terminal. Với `run_site.cmd`, các phiên được lưu dưới `artifacts/latest/`:
 
@@ -58,6 +59,43 @@ Khi bật `--save-debug`, mỗi lần mở bot sẽ tạo một thư mục `sess
 Chỉ số `pipes` là số ống bot đếm từ hình ảnh, có thể khác điểm hiển thị trên website. Ván bị dừng giữa chừng được lưu kèm lý do. Bot cũng xử lý hộp thoại nhập tên có thể xuất hiện trước khi chơi lại. Các tệp chẩn đoán không được đưa vào Git.
 
 Website thực tế có thể cần hiệu chỉnh riêng vì đồ họa, lớp giao diện, bố cục canvas và vật lý khác với bản demo.
+
+### Hiệu chỉnh màu và vùng game bằng chuột
+
+Nhấp đúp `run_calibrate.cmd` để hiệu chỉnh website, hoặc chạy:
+
+```powershell
+python -m flappy_auto --calibrate --profile profiles\site.json
+```
+
+Để thử quy trình với demo ngoại tuyến:
+
+```powershell
+python -m flappy_auto --demo --calibrate --profile profiles\demo.json
+```
+
+Cửa sổ tiếng Việt dùng **Tkinter** (có trong bản cài Python tiêu chuẩn trên Windows), không cần PySide6 hay Pillow. Trên Linux, nếu Python thiếu Tkinter, cài gói `python3-tk` của hệ điều hành. Hiệu chỉnh mở trình duyệt và cửa sổ riêng; không kết hợp với `--headless`, `--debug`, `--dry-run` hoặc `--capture-only`.
+
+1. Bấm **Chụp ảnh** để cập nhật một ảnh tĩnh, hoặc bật **Ảnh trực tiếp**. Dùng **Bắt đầu**, **Space**, **Chơi lại** để thao tác game trong lúc hiệu chỉnh. Khi ống xuất hiện, nhấp vào ảnh để dừng cập nhật và lấy mẫu.
+2. Chọn **Kéo chọn vùng game**, kéo trên khung ảnh gốc. Chọn **toàn bộ sân chơi**, gồm chim, ống trên và ống dưới; không chỉ khoanh quanh chim. Dòng phía trên ảnh ghi rõ gốc tọa độ là phần tử game được tìm theo selector hay toàn bộ viewport. Bấm **Toàn bộ ảnh** nếu không cần cắt.
+3. Chọn **Lấy mẫu chim**, nhấp phần thân có màu chính; chọn **Lấy mẫu ống**, nhấp phần màu chính của ống. Mỗi lần nhấp lấy mẫu vùng 5 × 5 pixel và lọc nhiễu; nhấp nhiều vị trí để mở rộng khoảng màu. Tránh nền, mắt, viền và chữ điểm. **Xóa mẫu** xóa lịch sử lấy mẫu của đối tượng, giữ ngưỡng hiện tại.
+4. Xem đồng thời ảnh có vòng nhận diện, **mặt nạ chim** và **mặt nạ ống**. Điều chỉnh sáu giá trị HSV cho mỗi đối tượng rồi bấm **Áp dụng ngưỡng / Thử nhận diện**. H từ 0–179; S/V từ 0–255. H thấp lớn hơn H cao biểu diễn dải đi qua 179 → 0 (màu đỏ). S/V thấp phải nhỏ hơn hoặc bằng S/V cao.
+5. Tắt **Ưu tiên mỏ đỏ / mắt trắng** nếu nhân vật không có những đặc điểm này. **Màu mặc định** khôi phục toàn bộ ngưỡng và hai tùy chọn; **Mở profile** nạp lại cấu hình đã lưu cho cùng website, selector và viewport.
+6. Bấm **Lưu profile…**, chọn tệp JSON, đóng cửa sổ rồi chạy bot:
+
+```powershell
+python -m flappy_auto --profile profiles\site.json --debug --runs 3 --seconds 0
+# Profile demo tự khởi động máy chủ demo, không lưu URL localhost tạm thời.
+python -m flappy_auto --profile profiles\demo.json --debug --seconds 40
+```
+
+`--calibrate` chỉ hiệu chỉnh và thoát, không tự chạy bot sau khi lưu. Nếu bỏ `--profile`, đường dẫn lưu gợi ý là `profiles/site.json` hoặc `profiles/demo.json`. Profile gồm phiên bản định dạng, chế độ website/demo, URL website, selector, viewport, ROI, kích thước ảnh tham chiếu theo pixel CSS, gốc tọa độ và ngưỡng màu. Hai gợi ý mỏ/mắt có thể đổi cả dải màu trong JSON. Chưa có cơ chế tìm lại chim hoặc đánh giá độ tin cậy; phần đó thuộc issue #2.
+
+**Thứ tự ưu tiên:** tham số CLI được truyền rõ ràng → profile → mặc định hiện tại. `--url` chọn website, `--demo` chọn demo (nếu truyền cả hai thì demo được ưu tiên). `--selector`, `--viewport` và `--roi` ghi đè mục tương ứng. Dùng `--full-frame` để bỏ ROI đã lưu. Ngưỡng màu lấy từ profile. Không truyền profile vẫn giữ cách chạy và màu mặc định trước đây.
+
+Khi ảnh game thay đổi kích thước hoặc gốc tọa độ khác profile, bot báo lỗi và yêu cầu hiệu chỉnh lại; thay viewport trên CLI không tắt kiểm tra này. Chạy lại `--calibrate --profile <tệp>` sẽ giữ ngưỡng màu, bỏ ROI cũ nếu bố cục khác để bạn chọn lại. Trong lúc chạy bot, kích thước phần tử được kiểm tra lại khoảng mỗi giây. Tọa độ được chuẩn hóa theo pixel CSS trước khi cắt ROI, kể cả khi Windows dùng DPI lớn hơn 100%. Chromium có thể bố trí phần tử hơi khác khi đổi sang `--headless`; nếu bị báo khác kích thước, chạy cùng chế độ có cửa sổ đã dùng khi hiệu chỉnh.
+
+Thư mục `profiles/` và ảnh chẩn đoán trong `artifacts/` được Git bỏ qua. Khi lưu profile cá nhân, hãy dùng `profiles/`. [Cấu hình mẫu](examples/default-profile.json) giữ màu mặc định và chưa ràng buộc kích thước ảnh (`reference_size: null`, không có ROI); dùng cửa sổ hiệu chỉnh để lưu kích thước thật trước khi dùng lâu dài. Khi mở profile thuộc nguồn khác trong cửa sổ, hãy thoát và mở lại bằng `--calibrate --profile <tệp>` để trình duyệt tải đúng trang.
 
 ### Hiệu năng chụp và xử lý ảnh
 
@@ -136,6 +174,8 @@ FlappyBird-AutoPlayer/
 │   ├── __main__.py      # Dòng lệnh và vòng lặp điều khiển
 │   ├── browser.py       # Chụp ảnh, gửi phím, chọn canvas/iframe
 │   ├── vision.py        # Nhận diện, theo dõi chim và ống bằng OpenCV
+│   ├── profiles.py      # Profile JSON có phiên bản và kiểm tra cấu hình
+│   ├── calibration.py   # Giao diện chọn vùng game, lấy mẫu và xem mặt nạ
 │   ├── strategy.py      # Ước lượng vật lý và lập kế hoạch nhảy
 │   ├── session.py       # Theo dõi ván chơi, đếm ống và nhận diện giao diện
 │   ├── recording.py     # Lưu dữ liệu chẩn đoán và ảnh trước khi chết
@@ -147,7 +187,8 @@ FlappyBird-AutoPlayer/
 ├── tests/               # Bộ kiểm thử bằng Pytest
 ├── docs/architecture.md
 ├── .github/workflows/ci.yml
-├── run_demo.cmd / run_site.cmd
+├── examples/default-profile.json
+├── run_demo.cmd / run_site.cmd / run_calibrate.cmd
 ├── pyproject.toml
 ├── requirements.txt
 ├── LICENSE
@@ -178,9 +219,9 @@ git clone https://github.com/TieuBao-IT89/FlappyBird-AutoPlayer.git FlappyBird-A
 cd FlappyBird-AutoPlayer-GitHub
 ```
 
-Nếu nhập mã từ tệp nén, chép `.github/`, `demo/`, `docs/`, `src/`, `tests/`, `.gitignore`, `LICENSE`, `pyproject.toml`, `README.md`, `requirements.txt`, `run_demo.cmd` và `run_site.cmd` vào thư mục gốc của bản clone. Không chép thêm các thư mục bao ngoài của tệp nén vào cấu trúc dự án.
+Nếu nhập mã từ tệp nén, chép `.github/`, `demo/`, `docs/`, `examples/`, `src/`, `tests/`, `.gitignore`, `LICENSE`, `pyproject.toml`, `README.md`, `requirements.txt`, `run_demo.cmd`, `run_site.cmd` và `run_calibrate.cmd` vào thư mục gốc của bản clone. Không chép thêm các thư mục bao ngoài của tệp nén vào cấu trúc dự án.
 
-Không đưa `.venv/`, `venv/`, `.pytest_cache/`, `__pycache__/`, `*.egg-info/`, `artifacts/`, `.env`, `dist/` và `build/` vào Git. Các mục này đã nằm trong `.gitignore`; không dùng tùy chọn ép thêm chúng.
+Không đưa `.venv/`, `venv/`, `.pytest_cache/`, `__pycache__/`, `*.egg-info/`, `artifacts/`, `profiles/`, `.env`, `dist/` và `build/` vào Git. Các mục này đã nằm trong `.gitignore`; không dùng tùy chọn ép thêm chúng.
 
 Kiểm tra các thay đổi và tệp đã đưa vào vùng chờ trước khi commit:
 
@@ -194,7 +235,7 @@ git push -u origin main
 ```
 
 
-Một số hướng phát triển tiếp: hiệu chỉnh màu bằng cách chọn pixel mẫu, hỗ trợ nhiều giao diện game, đọc điểm từ ảnh bằng OCR, so sánh các bộ điều khiển, xây dựng giao diện quản lý và bổ sung kiểm thử trình duyệt vào CI.
+Một số hướng phát triển tiếp: đánh giá độ tin cậy và phục hồi nhận diện, hỗ trợ nhiều giao diện game, đọc điểm từ ảnh bằng OCR, so sánh các bộ điều khiển, xây dựng giao diện quản lý và bổ sung kiểm thử trình duyệt vào CI.
 
 ## Sử dụng có trách nhiệm
 
