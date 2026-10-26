@@ -62,10 +62,12 @@ A flap decision retains the velocity at the image timestamp until the expected d
 
 `rl.FlappyEnv` cung cấp mô phỏng Python độc lập để chuẩn bị huấn luyện RL: hai hành động, năm đặc trưng hình học, RNG theo seed, reward và giới hạn bước. Module chỉ nạp Gymnasium khi import `flappy_auto.rl`; bot và simulator benchmark tiếp tục dùng đường đi hiện tại. Vật lý dựa trên hằng số demo ở bước cố định 1/60 giây; không đồng nhất với mô hình benchmark có nhiễu/độ trễ hoặc browser thật. `scripts/rl_smoke.py` chạy agent ngẫu nhiên; CI chạy cả smoke và kiểm tra API Gymnasium. Xem [hướng dẫn Gymnasium](gymnasium.md) để biết đặc trưng, reward và khác biệt với demo.
 
+`rl.dqn` thêm DQN CPU qua extra tùy chọn: `SeedSchedule` giới hạn episode trong tập training, callback chỉ dùng validation để chọn checkpoint, còn `rl.evaluation` so sánh mô hình đã cố định với random/reactive trên seed test. Mỗi ZIP có metadata/hash để kiểm tra khi load. Các script train/play/evaluate không đi qua vòng điều khiển browser. Xem [hướng dẫn DQN](dqn.md) cho cấu hình và giới hạn tái lập.
+
 ## Ideas for future milestones
 
 - Broader replay/benchmark datasets and game profiles.
 - Broader theme/skin support for visual retry controls.
 - Score OCR and a dashboard comparing completed runs.
-- Train and evaluate seeded RL agents using the standalone Gymnasium environment.
+- Evaluate RL agents across multiple training seeds and bridge simulator observations to browser vision.
 - Smoke test via headless Chromium against the bundled demo.

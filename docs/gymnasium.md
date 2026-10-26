@@ -89,4 +89,4 @@ Va chạm trả `terminated=True`. Đạt `max_steps` khi còn sống trả `tru
 
 Đây là module riêng trong `flappy_auto/rl/`; `strategy.py`, `vision.py` và vòng điều khiển trình duyệt tiếp tục hoạt động như trước. Simulator benchmark trong `simulation.py` có cấu hình, nhiễu, độ trễ và kiểm tra va chạm riêng; không tự chuyển sang môi trường Gymnasium này. Điểm giữa hai môi trường chưa phải phép so sánh cùng điều kiện, và điểm RL không đại diện cho điểm website.
 
-Bước tiếp theo là issue **feat: Train DQN Agent using Stable-Baselines3**: huấn luyện, lưu/nạp mô hình và đánh giá trên tập seed riêng với baseline, tách rõ ván hoàn thành với ván hết thời gian. Đó là công việc tiếp theo sau khi môi trường này đã được kiểm thử.
+Pipeline DQN hiện có trong [hướng dẫn huấn luyện](dqn.md): dùng extra `dqn` để huấn luyện, lưu/nạp checkpoint và so sánh với baseline trên seed tách riêng. Lệnh `rl_smoke.py` của tài liệu này vẫn là agent ngẫu nhiên, không yêu cầu thư viện huấn luyện.

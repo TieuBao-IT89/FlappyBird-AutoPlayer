@@ -16,3 +16,6 @@ build/
 artifacts/
 profiles/
 *.log
+models/
+checkpoints/
+*.zip
